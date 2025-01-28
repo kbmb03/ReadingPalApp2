@@ -6,6 +6,15 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		D0D8A75F2D485944001738C2 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = D0D8A75E2D485944001738C2 /* FirebaseAnalytics */; };
+		D0D8A7612D485944001738C2 /* FirebaseAnalyticsOnDeviceConversion in Frameworks */ = {isa = PBXBuildFile; productRef = D0D8A7602D485944001738C2 /* FirebaseAnalyticsOnDeviceConversion */; };
+		D0D8A7632D485944001738C2 /* FirebaseAnalyticsWithoutAdIdSupport in Frameworks */ = {isa = PBXBuildFile; productRef = D0D8A7622D485944001738C2 /* FirebaseAnalyticsWithoutAdIdSupport */; };
+		D0D8A7652D485944001738C2 /* FirebaseAppCheck in Frameworks */ = {isa = PBXBuildFile; productRef = D0D8A7642D485944001738C2 /* FirebaseAppCheck */; };
+		D0D8A7672D485944001738C2 /* FirebaseAppDistribution-Beta in Frameworks */ = {isa = PBXBuildFile; productRef = D0D8A7662D485944001738C2 /* FirebaseAppDistribution-Beta */; };
+		D0D8A76A2D48595A001738C2 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = D0D8A7692D48595A001738C2 /* FirebaseMessaging */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		D0F40F142D48342200684ED8 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -30,6 +39,13 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		D0D8A75B2D485410001738C2 /* Exceptions for "ReadingPal2" folder in "ReadingPal2" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = D0F40F022D48342200684ED8 /* ReadingPal2 */;
+		};
 		D0F40F342D48351000684ED8 /* Exceptions for "ReadingPal2" folder in "ReadingPal2Tests" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -43,6 +59,7 @@
 		D0F40F052D48342200684ED8 /* ReadingPal2 */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
+				D0D8A75B2D485410001738C2 /* Exceptions for "ReadingPal2" folder in "ReadingPal2" target */,
 				D0F40F342D48351000684ED8 /* Exceptions for "ReadingPal2" folder in "ReadingPal2Tests" target */,
 			);
 			path = ReadingPal2;
@@ -65,6 +82,12 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0D8A76A2D48595A001738C2 /* FirebaseMessaging in Frameworks */,
+				D0D8A7652D485944001738C2 /* FirebaseAppCheck in Frameworks */,
+				D0D8A75F2D485944001738C2 /* FirebaseAnalytics in Frameworks */,
+				D0D8A7672D485944001738C2 /* FirebaseAppDistribution-Beta in Frameworks */,
+				D0D8A7632D485944001738C2 /* FirebaseAnalyticsWithoutAdIdSupport in Frameworks */,
+				D0D8A7612D485944001738C2 /* FirebaseAnalyticsOnDeviceConversion in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -85,12 +108,20 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		D0D8A7682D48595A001738C2 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		D0F40EFA2D48342200684ED8 = {
 			isa = PBXGroup;
 			children = (
 				D0F40F052D48342200684ED8 /* ReadingPal2 */,
 				D0F40F162D48342200684ED8 /* ReadingPal2Tests */,
 				D0F40F202D48342200684ED8 /* ReadingPal2UITests */,
+				D0D8A7682D48595A001738C2 /* Frameworks */,
 				D0F40F042D48342200684ED8 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -125,6 +156,12 @@
 			);
 			name = ReadingPal2;
 			packageProductDependencies = (
+				D0D8A75E2D485944001738C2 /* FirebaseAnalytics */,
+				D0D8A7602D485944001738C2 /* FirebaseAnalyticsOnDeviceConversion */,
+				D0D8A7622D485944001738C2 /* FirebaseAnalyticsWithoutAdIdSupport */,
+				D0D8A7642D485944001738C2 /* FirebaseAppCheck */,
+				D0D8A7662D485944001738C2 /* FirebaseAppDistribution-Beta */,
+				D0D8A7692D48595A001738C2 /* FirebaseMessaging */,
 			);
 			productName = ReadingPal2;
 			productReference = D0F40F032D48342200684ED8 /* ReadingPal2.app */;
@@ -208,6 +245,9 @@
 			);
 			mainGroup = D0F40EFA2D48342200684ED8;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				D0D8A75D2D485944001738C2 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = D0F40F042D48342200684ED8 /* Products */;
 			projectDirPath = "";
@@ -406,12 +446,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = ReadingPal2/ReadingPal2.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"ReadingPal2/Preview Content\"";
 				DEVELOPMENT_TEAM = 86FB7G747T;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ReadingPal2/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -435,12 +477,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = ReadingPal2/ReadingPal2.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"ReadingPal2/Preview Content\"";
 				DEVELOPMENT_TEAM = 86FB7G747T;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ReadingPal2/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -571,6 +615,50 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		D0D8A75D2D485944001738C2 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 11.7.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		D0D8A75E2D485944001738C2 /* FirebaseAnalytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D0D8A75D2D485944001738C2 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalytics;
+		};
+		D0D8A7602D485944001738C2 /* FirebaseAnalyticsOnDeviceConversion */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D0D8A75D2D485944001738C2 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalyticsOnDeviceConversion;
+		};
+		D0D8A7622D485944001738C2 /* FirebaseAnalyticsWithoutAdIdSupport */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D0D8A75D2D485944001738C2 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalyticsWithoutAdIdSupport;
+		};
+		D0D8A7642D485944001738C2 /* FirebaseAppCheck */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D0D8A75D2D485944001738C2 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAppCheck;
+		};
+		D0D8A7662D485944001738C2 /* FirebaseAppDistribution-Beta */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D0D8A75D2D485944001738C2 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = "FirebaseAppDistribution-Beta";
+		};
+		D0D8A7692D48595A001738C2 /* FirebaseMessaging */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D0D8A75D2D485944001738C2 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseMessaging;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = D0F40EFB2D48342200684ED8 /* Project object */;
 }

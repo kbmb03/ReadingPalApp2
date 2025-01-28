@@ -10,7 +10,7 @@ import SwiftUI
 @main
 struct ReadingPalApp: App {
     @StateObject private var sessionsManager = SessionsManager()
-    //@UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     init() {
         //requestNotificationPermissions()
