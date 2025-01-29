@@ -13,8 +13,6 @@ struct ReadingPalApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     init() {
-        //requestNotificationPermissions()
-        //sessionsManager.scheduleNotificationsForUnfinishedBooks()
     }
 
     var body: some Scene {
@@ -25,13 +23,4 @@ struct ReadingPalApp: App {
         }
     }
 
-//    private func requestNotificationPermissions() {
-//        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, error in
-//            if granted {
-//                print("Notifications permission granted.")
-//            } else if let error = error {
-//                print("Notifications permission denied: \(error.localizedDescription)")
-//            }
-//        }
-//    }
 }
