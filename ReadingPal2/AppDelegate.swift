@@ -10,6 +10,7 @@ import UIKit
 import FirebaseCore
 import FirebaseMessaging
 import UserNotifications
+import FirebaseAuth
 
 class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate, MessagingDelegate {
     

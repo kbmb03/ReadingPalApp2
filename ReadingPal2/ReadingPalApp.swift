@@ -19,7 +19,8 @@ struct ReadingPalApp: App {
 
     var body: some Scene {
         WindowGroup {
-            BookListView()
+            SignInView()
+            //BookListView()
                 .environmentObject(sessionsManager)
         }
     }
