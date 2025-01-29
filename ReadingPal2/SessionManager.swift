@@ -159,41 +159,4 @@ class SessionsManager: ObservableObject {
         saveFinishedBooks()
     }
     
-    //Func for notifications
-//    func unfinishedBooksNotifyUser() -> [String] {
-//        let date = Date()
-//        var booksToNotify: [String] = []
-//
-//        for (bookTitle, finishedDate) in finishedBooks {
-//            if let lastSession = sessions[bookTitle]?.last?["date"] as? Date {
-//                if let daysSinceLastRead = Calendar.current.dateComponents([.day], from: lastSession, to: date).day {
-//                    if daysSinceLastRead > -2 {
-//                        print(bookTitle)
-//                        booksToNotify.append(bookTitle)
-//                    }
-//                }
-//            }
-//        }
-//        return booksToNotify
-//    }
-//    func scheduleNotificationsForUnfinishedBooks() {
-//        let booksToNotify = unfinishedBooksNotifyUser()
-//        
-//        for book in booksToNotify {
-//            let content = UNMutableNotificationContent()
-//            content.title = "Keep Reading!"
-//            content.body = "You haven't read '\(book)' in a while. Jump back into it!"
-//            content.sound = .default
-//            
-//            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
-//
-//            let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: trigger)
-//
-//            UNUserNotificationCenter.current().add(request) { error in
-//                if let error = error {
-//                    print("Error scheduling notification: \(error.localizedDescription)")
-//                }
-//            }
-//        }
-//    }
 }

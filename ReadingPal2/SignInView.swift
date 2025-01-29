@@ -11,7 +11,7 @@ import UIKit
 import FirebaseAuth
 
 struct SignInView: View {
-    @EnvironmentObject var authManager: AuthManager
+    //@EnvironmentObject var authManager: AuthManager
 
     @State private var email: String = ""
     @State private var password: String = ""
@@ -64,19 +64,6 @@ struct SignInView: View {
                     .font(.system(size: 14))
                 }
             }
-        }
-    }
-}
-
-extension View {
-    func placeholder<Content: View>(
-        when shouldShow: Bool,
-        alignment: Alignment = .leading,
-        @ViewBuilder placeholder: () -> Content) -> some View {
-
-        ZStack(alignment: alignment) {
-            placeholder().opacity(shouldShow ? 1 : 0)
-            self
         }
     }
 }
