@@ -61,16 +61,28 @@ class AuthViewModel: ObservableObject {
         }
     }
     
-    func deleteAccount() async {
-        guard let user = Auth.auth().currentUser else {
+    func deleteAccount(password: String) async -> Bool {
+        guard let user = Auth.auth().currentUser, let email = user.email else {
             print("No authenticated user found.")
-            return
+            return false
         }
+
+        let credential = EmailAuthProvider.credential(withEmail: email, password: password)
+
         do {
+            try await user.reauthenticate(with: credential)
+            print("Re-authentication successful. Proceeding with deletion.")
+
             try await user.delete()
             print("Account successfully deleted.")
+
+            self.userSession = nil
+            self.currentUser = nil
+
+            return true
         } catch {
             print("Failed to delete account: \(error.localizedDescription)")
+            return false
         }
     }
 

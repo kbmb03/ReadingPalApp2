@@ -58,13 +58,41 @@ struct ProfileView: View {
                     } label: {
                         SettingsRowView(imageName: "arrow.left.circle.fill", title: "Sign Out", tintColor: .red)
                     }
-                    Button {
-                        Task {
-                            await viewModel.deleteAccount()
+                        Button {
+                            showDeletionConfirmation = true
+                        } label: {
+                            SettingsRowView(imageName: "xmark.circle.fill", title: "Delete Account", tintColor: .red)
                         }
-                    } label: {
-                        SettingsRowView(imageName: "xmark.circle.fill", title: "Delete Account", tintColor: .red)
+                    .alert("Delete Account", isPresented: $showDeletionConfirmation) {
+                            SecureField("Enter your password", text: $password)
+                            
+                            if isLoading {
+                                ProgressView()
+                            }
+                        
+                            Button("Delete", role: .destructive) {
+                                Task {
+                                    isLoading = true
+                                    let accountDeleted = await viewModel.deleteAccount(password: password)
+                                    isLoading = false
+                                
+                                if !accountDeleted {
+                                    showError = true
+                                    errorMessage = "Incorrect password. Please try again"
+                                }
+                            }
+                        }
+                        .disabled(isLoading)
+                        
+                        Button("Cancel", role: .cancel) {
+                            password = ""
+                        }
                     }
+                }
+                .alert("Error", isPresented: $showError) {
+                    Button("OK", role: .cancel) {}
+                } message: {
+                    Text(errorMessage)
                 }
             }
         }
