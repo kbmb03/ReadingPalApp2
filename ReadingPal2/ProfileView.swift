@@ -90,7 +90,9 @@ struct ProfileView: View {
                     }
                 }
                 .alert("Error", isPresented: $showError) {
-                    Button("OK", role: .cancel) {}
+                    Button("OK", role: .cancel) {
+                        password = ""
+                    }
                 } message: {
                     Text(errorMessage)
                 }
