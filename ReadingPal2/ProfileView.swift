@@ -10,6 +10,7 @@ import SwiftUI
 struct ProfileView: View {
     @EnvironmentObject var viewModel: AuthViewModel
     @State private var showDeletionConfirmation = false
+    @State private var showSignOutConfirmation = false
     @State private var password = ""
     @State private var isLoading = false
     @State private var showError = false
@@ -54,10 +55,23 @@ struct ProfileView: View {
                 
                 Section("Account") {
                     Button {
-                        viewModel.signOut()
+                        //viewModel.signOut()
+                        showSignOutConfirmation = true
                     } label: {
                         SettingsRowView(imageName: "arrow.left.circle.fill", title: "Sign Out", tintColor: .red)
                     }
+                    .alert("Sign Out", isPresented: $showSignOutConfirmation) {
+                        Button("Confirm", role: .destructive) {
+                            viewModel.signOut()
+                        }
+                        Button("Cancel", role: .cancel) {
+                            showSignOutConfirmation = false
+                        }
+                    } message: {
+                        Text("Are you sure you want to sign out? You can sign back in anytime.")
+                    }
+                    
+                    
                         Button {
                             showDeletionConfirmation = true
                         } label: {
