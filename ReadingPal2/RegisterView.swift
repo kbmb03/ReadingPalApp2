@@ -12,6 +12,7 @@ struct RegisterView: View {
     @State private var fullname = ""
     @State private var password = ""
     @State private var confirmPassword = ""
+    @State private var showError = false
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var viewModel: AuthViewModel
 
@@ -52,6 +53,14 @@ struct RegisterView: View {
             .padding(.horizontal)
             .padding(.top, 12)
             
+            if let errorMessage = viewModel.authErrorMessage {
+                Text(errorMessage)
+                    .foregroundColor(.red)
+                    .font(.footnote)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+            }
+            
             Button {
                 guard formIsValid else { return }
                 Task {
@@ -84,6 +93,14 @@ struct RegisterView: View {
                 }
                 .font(.system(size: 14))
             }
+        }
+        .alert("Registration Error", isPresented: $showError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(viewModel.authErrorMessage ?? "An unknown error occurred.")
+        }
+        .onAppear {
+            viewModel.authErrorMessage = nil 
         }
     }
 }

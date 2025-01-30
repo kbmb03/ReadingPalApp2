@@ -18,6 +18,7 @@ protocol AuthenticationFormProtocol {
 class AuthViewModel: ObservableObject {
     @Published var userSession: FirebaseAuth.User?
     @Published var currentUser: User?
+    @Published var authErrorMessage: String?
     
     init() {
         self.userSession = Auth.auth().currentUser
@@ -45,9 +46,28 @@ class AuthViewModel: ObservableObject {
             let encodedUser = try Firestore.Encoder().encode(user)
             try await Firestore.firestore().collection("users").document(user.id).setData(encodedUser)
             await fetchUser()
-        } catch {
-            print("Failed to create user with error \(error.localizedDescription)")
+        } catch let error as NSError {
+            DispatchQueue.main.async {
+                self.authErrorMessage = self.handleAuthError(error)
+            }
 
+        }
+    }
+    
+    private func handleAuthError(_ error: NSError) -> String {
+        switch error.code {
+        case AuthErrorCode.emailAlreadyInUse.rawValue:
+            return "This email is already in use. Try signing in or using a different email."
+        case AuthErrorCode.invalidEmail.rawValue:
+            return "Invalid email format. Please enter a valid email address."
+        case AuthErrorCode.weakPassword.rawValue:
+            return "Password is too short. Please use at least 6 characters."
+        case AuthErrorCode.missingEmail.rawValue:
+            return "Please enter an email address."
+        case AuthErrorCode.networkError.rawValue:
+            return "Network error. Please check your connection and try again."
+        default:
+            return "Registration failed. Please try again later."
         }
     }
     
