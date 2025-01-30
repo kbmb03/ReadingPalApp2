@@ -15,6 +15,7 @@ struct ContentView: View {
                 //BookListView()
                 ProfileView()
             } else {
+                //BookListView()
                 SignInView()
             }
         }

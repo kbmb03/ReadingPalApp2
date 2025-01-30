@@ -33,8 +33,10 @@ class AuthViewModel: ObservableObject {
             let result = try await Auth.auth().signIn(withEmail: email, password: password)
             self.userSession = result.user
             await fetchUser()
-        } catch {
-            print("Failed to log in with error \(error.localizedDescription)")
+        } catch let error as NSError {
+            DispatchQueue.main.async {
+                self.authErrorMessage = self.handleSignInError(error)
+            }
         }
     }
     
@@ -70,6 +72,24 @@ class AuthViewModel: ObservableObject {
             return "Registration failed. Please try again later."
         }
     }
+    
+    private func handleSignInError(_ error: NSError) -> String {
+        switch error.code {
+        case AuthErrorCode.wrongPassword.rawValue:
+            return "Incorrect password. Please try again."
+        case AuthErrorCode.userNotFound.rawValue:
+            return "No account found with this email. Please check your email or sign up."
+        case AuthErrorCode.invalidEmail.rawValue:
+            return "Invalid email format. Please enter a valid email address."
+        case AuthErrorCode.missingEmail.rawValue:
+            return "Please enter an email address."
+        case AuthErrorCode.networkError.rawValue:
+            return "Network error. Please check your connection and try again."
+        default:
+            return "Login failed. Please try again later."
+        }
+    }
+
     
     func signOut() {
         do {
@@ -111,7 +131,6 @@ class AuthViewModel: ObservableObject {
         guard let uid = Auth.auth().currentUser?.uid else { return }
         guard let snapshot = try? await Firestore.firestore().collection("users").document(uid).getDocument() else { return }
         self.currentUser = try? snapshot.data(as: User.self)
-        
         print("curret user is \(String(describing: self.currentUser))")
     }
 }

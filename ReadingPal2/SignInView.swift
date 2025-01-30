@@ -16,7 +16,6 @@ struct SignInView: View {
     @State private var email: String = ""
     @State private var password: String = ""
     @State private var errorMessage: String?
-    @State private var UserIsLoggedIn: Bool = false
     @EnvironmentObject var viewModel: AuthViewModel
     
     var body: some View {
@@ -36,6 +35,14 @@ struct SignInView: View {
                 }
                 .padding(.horizontal)
                 .padding(.top, 12)
+                
+                if let errorMessage = viewModel.authErrorMessage {
+                    Text(errorMessage)
+                        .foregroundColor(.red)
+                        .font(.footnote)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                }
                 
                 Button {
                     Task {
@@ -68,6 +75,13 @@ struct SignInView: View {
                     }
                     .font(.system(size: 14))
                 }
+            }
+            .onAppear() {
+                viewModel.authErrorMessage = nil
+            }
+            .onDisappear {
+                email = ""
+                password = ""
             }
         }
     }
