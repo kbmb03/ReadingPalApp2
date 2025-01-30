@@ -61,15 +61,25 @@ class AuthViewModel: ObservableObject {
         }
     }
     
-    func deleteAccount() {
-        
+    func deleteAccount() async {
+        guard let user = Auth.auth().currentUser else {
+            print("No authenticated user found.")
+            return
+        }
+        do {
+            try await user.delete()
+            print("Account successfully deleted.")
+        } catch {
+            print("Failed to delete account: \(error.localizedDescription)")
+        }
     }
+
     
     func fetchUser() async {
         guard let uid = Auth.auth().currentUser?.uid else { return }
         guard let snapshot = try? await Firestore.firestore().collection("users").document(uid).getDocument() else { return }
         self.currentUser = try? snapshot.data(as: User.self)
         
-        print("curret user is \(self.currentUser)")
+        print("curret user is \(String(describing: self.currentUser))")
     }
 }

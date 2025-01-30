@@ -9,6 +9,12 @@ import SwiftUI
 
 struct ProfileView: View {
     @EnvironmentObject var viewModel: AuthViewModel
+    @State private var showDeletionConfirmation = false
+    @State private var password = ""
+    @State private var isLoading = false
+    @State private var showError = false
+    @State private var errorMessage = ""
+    
     var body: some View {
         if let user = viewModel.currentUser {
             List {
@@ -53,7 +59,9 @@ struct ProfileView: View {
                         SettingsRowView(imageName: "arrow.left.circle.fill", title: "Sign Out", tintColor: .red)
                     }
                     Button {
-                        print("Delete Account")
+                        Task {
+                            await viewModel.deleteAccount()
+                        }
                     } label: {
                         SettingsRowView(imageName: "xmark.circle.fill", title: "Delete Account", tintColor: .red)
                     }
@@ -61,8 +69,4 @@ struct ProfileView: View {
             }
         }
     }
-}
-
-#Preview {
-    ProfileView()
 }
