@@ -10,18 +10,20 @@ import SwiftUI
 
 struct MainTabView: View {
     var body: some View {
-        TabView {
-            BookListView()
-                .tabItem {
-                    Image(systemName: "book.fill")
-                    Text("Books")
-                }
-
-            ProfileView()
-                .tabItem {
-                    Image(systemName: "person.fill")
-                    Text("Profile")
-                }
+        NavigationStack {
+            TabView {
+                BookListView()
+                    .tabItem {
+                        Image(systemName: "book.fill")
+                        Text("Books")
+                    }
+                
+                ProfileView()
+                    .tabItem {
+                        Image(systemName: "gearshape.fill")
+                        Text("Settings")
+                    }
+            }
         }
     }
 }

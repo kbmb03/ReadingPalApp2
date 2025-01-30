@@ -47,6 +47,8 @@ struct BookSessionsView: View {
                     .environmentObject(sessionsManager)
             }
         }
+        .toolbar(.hidden, for: .tabBar)
+        //.toolbarRole(.editor)
         .toolbar {
             ToolbarItem(placement: .principal) {
                 HStack {

@@ -13,7 +13,7 @@ struct ContentView: View {
         Group {
             if viewModel.userSession != nil {
                 //BookListView()
-                ProfileView()
+                MainTabView()
             } else {
                 //BookListView()
                 SignInView()

@@ -42,6 +42,7 @@ struct BookListView: View {
                 .font(.headline)
             }
             .navigationTitle("My Books")
+            .toolbar(.visible, for: .tabBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
