@@ -17,6 +17,7 @@ struct SignInView: View {
     @State private var password: String = ""
     @State private var errorMessage: String?
     @State private var UserIsLoggedIn: Bool = false
+    @EnvironmentObject var viewModel: AuthViewModel
     
     var body: some View {
         NavigationStack {
@@ -37,7 +38,9 @@ struct SignInView: View {
                 .padding(.top, 12)
                 
                 Button {
-                    print("log in user")
+                    Task {
+                        try await viewModel.signIn(withEmail: email, password: password)
+                    }
                 } label: {
                     HStack {
                         Text("SIGN IN")

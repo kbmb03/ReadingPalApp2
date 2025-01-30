@@ -11,14 +11,15 @@ import SwiftUI
 struct ReadingPalApp: App {
     @StateObject private var sessionsManager = SessionsManager()
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    @StateObject var viewModel = AuthViewModel()
 
     init() {
     }
 
     var body: some Scene {
         WindowGroup {
-            SignInView()
-            //BookListView()
+            ContentView()
+                .environmentObject(viewModel)
                 .environmentObject(sessionsManager)
         }
     }
