@@ -45,7 +45,7 @@ struct SignInView: View {
                 }
                 HStack {
                     Spacer()
-                    NavigationLink(destination: BookListView()) {
+                    NavigationLink(destination: ForgotPasswordView()) {
                         Text("Forgot Password?")
                             .foregroundColor(.gray)
                             .font(.footnote)
