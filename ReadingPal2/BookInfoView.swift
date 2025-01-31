@@ -45,9 +45,9 @@ struct BookInfoView : View {
                     .font(.headline)
                     .foregroundColor(.gray)
                     .onTapGesture {
-                        if sessionsManager.isBookFinished(for: bookTitle) {
-                            showingDatePicker = true
-                        }
+//                        if sessionsManager.isBookFinished(for: bookTitle) {
+//                            showingDatePicker = true
+//                        }
                     }
             }
             Button(action: {

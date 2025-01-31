@@ -43,6 +43,17 @@ struct SignInView: View {
                         .multilineTextAlignment(.center)
                         .padding(.horizontal)
                 }
+                HStack {
+                    Spacer()
+                    NavigationLink(destination: BookListView()) {
+                        Text("Forgot Password?")
+                            .foregroundColor(.gray)
+                            .font(.footnote)
+                            .padding(.top, 8)
+                    }
+                    .padding(.trailing)
+                }
+
                 
                 Button {
                     Task {
