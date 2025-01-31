@@ -10,6 +10,7 @@ import SwiftUI
 struct ForgotPasswordView: View {
     @State private var email: String = ""
     @State private var errorMessage: String?
+    @State private var showConfirmationMessage = false
     @EnvironmentObject var viewModel: AuthViewModel
     
     var body: some View {
@@ -39,6 +40,9 @@ struct ForgotPasswordView: View {
                     
                     Button {
                         Task {
+                            //when/ if link sent...
+                            showConfirmationMessage = true
+                            email = ""
                             //sent forgot password link
                         }
                     } label: {
@@ -49,6 +53,11 @@ struct ForgotPasswordView: View {
                         .foregroundStyle(.white)
                         .frame(width: UIScreen.main.bounds.width - 32, height: 48)
                     }
+                    .alert("Email sent", isPresented: $showConfirmationMessage) {
+                    } message: {
+                        Text("an email has been sent to you with instructions to reset your password")
+                    }
+            
                     .background(Color(.systemBlue))
                     .disabled(!formIsValid)
                     .opacity(formIsValid ? 1.0 : 0.5)
