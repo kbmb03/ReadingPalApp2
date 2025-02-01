@@ -133,4 +133,28 @@ class AuthViewModel: ObservableObject {
         self.currentUser = try? snapshot.data(as: User.self)
         print("curret user is \(String(describing: self.currentUser))")
     }
+    
+    func resetPassword(withEmail email: String) async -> Bool {
+        do {
+            try await Auth.auth().sendPasswordReset(withEmail: email)
+            return true
+        } catch let error as NSError {
+            DispatchQueue.main.async {
+                self.authErrorMessage = self.handlePasswordResetError(error)
+            }
+            return false
+        }
+    }
+    private func handlePasswordResetError(_ error: NSError) -> String {
+        switch error.code {
+        case AuthErrorCode.invalidEmail.rawValue:
+            return "Invalid email format. Please enter a valid email."
+        case AuthErrorCode.userNotFound.rawValue:
+            return "No account found with this email."
+        case AuthErrorCode.networkError.rawValue:
+            return "Network error. Please check your connection."
+        default:
+            return "Failed to send reset email. Please try again."
+        }
+    }
 }

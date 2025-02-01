@@ -40,10 +40,14 @@ struct ForgotPasswordView: View {
                     
                     Button {
                         Task {
-                            //when/ if link sent...
-                            showConfirmationMessage = true
-                            email = ""
-                            //sent forgot password link
+                            let successfullyResetPassowrd = await viewModel.resetPassword(withEmail: email)
+                            if successfullyResetPassowrd {
+                                errorMessage = nil
+                                email = ""
+                                showConfirmationMessage = true
+                            } else {
+                                errorMessage = viewModel.authErrorMessage
+                            }
                         }
                     } label: {
                         HStack {
