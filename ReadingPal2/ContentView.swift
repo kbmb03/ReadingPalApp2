@@ -10,13 +10,22 @@ import SwiftUI
 struct ContentView: View {
     @EnvironmentObject var viewModel: AuthViewModel
     var body: some View {
-        Group {
-            if viewModel.userSession != nil {
-                //BookListView()
-                MainTabView()
-            } else {
-                //BookListView()
-                SignInView()
+        if !viewModel.loadingComplete {
+            ProgressView("Loading books...")
+                .onAppear {
+                    Task {
+                        await viewModel.fetchUser()
+                    }
+                }
+        } else {
+            Group {
+                if viewModel.userSession != nil {
+                    //BookListView()
+                    MainTabView()
+                } else {
+                    //BookListView()
+                    SignInView()
+                }
             }
         }
     }

@@ -9,7 +9,7 @@ import Foundation
 import SwiftUI
 
 struct AddBookView: View {
-    @EnvironmentObject var sessionsManager: SessionsManager
+    @EnvironmentObject var authView: AuthViewModel
     @Environment(\.dismiss) var dismiss
     @State private var newBookTitle: String = ""
 
@@ -20,7 +20,7 @@ struct AddBookView: View {
                 .padding()
 
             Button("Add Book") {
-                sessionsManager.addBook(newBookTitle)
+                authView.addBook(newBookTitle)
                 dismiss()
             }
             .font(.headline)

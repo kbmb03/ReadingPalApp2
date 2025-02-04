@@ -10,26 +10,25 @@ import SwiftUICore
 import SwiftUI
 
 struct BookListView: View {
-    @EnvironmentObject var sessionsManager: SessionsManager
+    @EnvironmentObject var AuthView : AuthViewModel
     @State private var showAddBookAlert = false
     @State private var newBookName = ""
     @State private var editMode: EditMode = .inactive // Local editMode state
     @State private var showDuplicateAlert = false // State to track duplicate book alert
-    @State private var refreshID = UUID() // Add this for force refresh
 
     var body: some View {
         NavigationView {
             List {
-                ForEach(sessionsManager.bookList(), id: \.self) { book in
+                ForEach(AuthView.books, id: \.self) { book in
                     NavigationLink(destination: BookSessionsView(bookTitle: book)) {
                         Text(book)
                     }
                 }
                 .onDelete(perform: { offsets in
-                    sessionsManager.removeBook(at: offsets)
+                    AuthView.removeBook(at: offsets)
                 })
                 .onMove(perform: { source, destination in
-                    sessionsManager.moveBook(from: source, to: destination)
+                    AuthView.moveBook(from: source, to: destination)
                 })
 
                 // Add new book button
@@ -41,14 +40,6 @@ struct BookListView: View {
                     }
                 }
                 .font(.headline)
-            }
-            .onAppear {
-                DispatchQueue.main.async {
-                    sessionsManager.books = []
-                }
-                Task {
-                    await sessionsManager.getData()
-                }
             }
             .navigationTitle("My Books")
             .toolbar(.visible, for: .tabBar)
@@ -84,11 +75,11 @@ struct BookListView: View {
     private func validateAndAddBook() {
         guard !newBookName.isEmpty else { return }
 
-        if sessionsManager.books.contains(newBookName) {
+        if AuthView.books.contains(newBookName) {
             showDuplicateAlert = true
             newBookName = ""
         } else {
-            sessionsManager.addBook(newBookName)
+            AuthView.addBook(newBookName)
             newBookName = ""
         }
     }

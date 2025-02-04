@@ -24,11 +24,6 @@ class SessionsManager: ObservableObject {
         
     }
     
-    func bookList() -> [String] {
-        print("returning from bookList(): \(self.books)")
-        return self.books
-    }
-    
     // Save books
     func saveBooks() {
     }
@@ -38,30 +33,27 @@ class SessionsManager: ObservableObject {
     }
     
     // Add a new book
-    func addBook(_ bookTitle: String) {
-        guard let userId = Auth.auth().currentUser?.uid else { return }
-        let userRef = db.collection("users").document(userId)
-        let bookRef = userRef.collection("books").document(bookTitle)
-
-        if books.contains(bookTitle) { return } // Avoid duplicates
-
-        books.insert(bookTitle, at: 0) // Add to top of local list
-
-        let batch = db.batch()
-        batch.setData(["library": books], forDocument: userRef, merge: true)
-        batch.setData(["title": bookTitle], forDocument: bookRef)
-        batch.commit { error in
-            if let error = error {
-                print("Error adding book: \(error.localizedDescription)")
-            }
-        }
-    }
+//    func addBook(_ bookTitle: String) {
+//        guard let userId = Auth.auth().currentUser?.uid else { return }
+//        let userRef = db.collection("users").document(userId)
+//        let bookRef = userRef.collection("books").document(bookTitle)
+//
+//        if books.contains(bookTitle) { return } // Avoid duplicates
+//
+//        books.insert(bookTitle, at: 0) // Add to top of local list
+//
+//        let batch = db.batch()
+//        batch.setData(["library": books], forDocument: userRef, merge: true)
+//        batch.setData(["title": bookTitle], forDocument: bookRef)
+//        batch.commit { error in
+//            if let error = error {
+//                print("Error adding book: \(error.localizedDescription)")
+//            }
+//        }
+//    }
     
-    func updateBooks(_ newBooks: [String]) {
-        print(" books before update are: \(self.books)")
-        self.books = newBooks
-        print("new updated books are: \(self.books)")
-    }
+    
+
 
     // Remove a book and its sessions
     func removeBook(at offsets: IndexSet) {
@@ -101,9 +93,6 @@ class SessionsManager: ObservableObject {
                 print("Error updating book order: \(error.localizedDescription)")
             }
         }
-        DispatchQueue.main.async {
-            self.books = self.books
-        }
     }
 
 
@@ -116,24 +105,6 @@ class SessionsManager: ObservableObject {
     // Update sessions for a book
     func updateSessions(for bookTitle: String, with updatedSessions: [[String: Any]]) {
 
-    }
-    
-    func getData() async {
-        guard let userId = Auth.auth().currentUser?.uid else { return }
-        let userRef = db.collection("users").document(userId)
-
-        do {
-            let snapshot = try await userRef.getDocument()
-            if let library = snapshot.data()?["library"] as? [String] {
-                print("🔄 Refreshing books from Firestore: \(library)")
-                await updateBooks(library)
-            } else {
-                print("⚠️ No books found, setting to empty list.")
-                await updateBooks([])
-            }
-        } catch {
-            print("❌ Error fetching books: \(error.localizedDescription)")
-        }
     }
     
     
