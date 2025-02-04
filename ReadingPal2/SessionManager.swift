@@ -8,95 +8,134 @@
 import Foundation
 import SwiftUI
 import UserNotifications
+import Firebase
+import FirebaseAuth
 
+@MainActor
 class SessionsManager: ObservableObject {
     @Published var books: [String] = []
     @Published var sessions: [String: [[String: Any]]] = [:] // Sessions keyed by book title
     @Published var finishedBooks: [String : Date] = [:]
+    private var db = Firestore.firestore()
+    
+    
 
-    init() {
-        loadBooks()
-        loadFinishedBooks()
-    }
-
-    // Load books and their sessions
-    func loadBooks() {
-        books = UserDefaults.standard.stringArray(forKey: "books") ?? []
-        for book in books {
-            var bookSessions = UserDefaults.standard.array(forKey: "\(book)-sessions") as? [[String: Any]] ?? []
-            // Ensure all sessions have an index
-            for i in 0..<bookSessions.count {
-                if bookSessions[i]["index"] == nil {
-                    bookSessions[i]["index"] = i + 1
-                }
-            }
-            sessions[book] = bookSessions
-        }
+    func loadFinishedBooks() {
+        
     }
     
-    func loadFinishedBooks() {
-        if let data = UserDefaults.standard.data(forKey: "finishedBooks") {
-            let decoder = JSONDecoder()
-            if let savedFinishedBooks = try? decoder.decode([String: Date].self, from: data) {
-                finishedBooks = savedFinishedBooks
-            }
-        }
+    func bookList() -> [String] {
+        print("returning from bookList(): \(self.books)")
+        return self.books
     }
-
+    
     // Save books
     func saveBooks() {
-        UserDefaults.standard.set(books, forKey: "books")
-        for (book, bookSessions) in sessions {
-            UserDefaults.standard.set(bookSessions, forKey: "\(book)-sessions")
-        }
     }
     
     func saveFinishedBooks() {
-        let encoder = JSONEncoder()
-        if let data = try? encoder.encode(finishedBooks) {
-            UserDefaults.standard.set(data, forKey: "finishedBooks")
-        }
+        
     }
-
+    
     // Add a new book
     func addBook(_ bookTitle: String) {
-        guard !bookTitle.isEmpty else { return }
-        books.insert(bookTitle, at: 0)
-        sessions[bookTitle] = []
-        saveBooks()
+        guard let userId = Auth.auth().currentUser?.uid else { return }
+        let userRef = db.collection("users").document(userId)
+        let bookRef = userRef.collection("books").document(bookTitle)
+
+        if books.contains(bookTitle) { return } // Avoid duplicates
+
+        books.insert(bookTitle, at: 0) // Add to top of local list
+
+        let batch = db.batch()
+        batch.setData(["library": books], forDocument: userRef, merge: true)
+        batch.setData(["title": bookTitle], forDocument: bookRef)
+        batch.commit { error in
+            if let error = error {
+                print("Error adding book: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    func updateBooks(_ newBooks: [String]) {
+        print(" books before update are: \(self.books)")
+        self.books = newBooks
+        print("new updated books are: \(self.books)")
     }
 
     // Remove a book and its sessions
     func removeBook(at offsets: IndexSet) {
-        for index in offsets {
-            let book = books[index]
-            books.remove(at: index)
-            sessions[book] = nil
-            UserDefaults.standard.removeObject(forKey: "\(book)-sessions")
+        guard let userId = Auth.auth().currentUser?.uid else { return }
+        let userRef = db.collection("users").document(userId)
+        
+        var updatedBooks = books
+        let removedBooks = offsets.map { updatedBooks[$0] }
+        
+        let batch = db.batch()
+        for book in removedBooks {
+            let bookRef = db.collection("users").document(userId).collection("books").document(book)
+            batch.deleteDocument(bookRef) // Delete book document
         }
-        saveBooks()
+        
+        updatedBooks.remove(atOffsets: offsets)
+        batch.updateData(["library": updatedBooks], forDocument: userRef) // Update Firestore
+        
+        batch.commit { error in
+            if let error = error {
+                print("Error updating book list: \(error.localizedDescription)")
+            }
+        }
+        DispatchQueue.main.async {
+            self.books = updatedBooks
+        }
     }
     
     func moveBook(from source: IndexSet, to destination: Int) {
+        guard let userId = Auth.auth().currentUser?.uid else { return }
+        let userRef = db.collection("users").document(userId)
+        
         books.move(fromOffsets: source, toOffset: destination)
-        saveBooks() // Ensure the updated order is saved
+        
+        userRef.updateData(["library": books]) { error in
+            if let error = error {
+                print("Error updating book order: \(error.localizedDescription)")
+            }
+        }
+        DispatchQueue.main.async {
+            self.books = self.books
+        }
     }
+
 
     // Add a session to a book
     func addSession(to bookTitle: String, session: [String: Any]) {
-        var newSession = session
-        let currentSessions = sessions[bookTitle] ?? []
-        newSession["index"] = currentSessions.count + 1 // Assign index based on creation order
-        sessions[bookTitle]?.append(newSession)
-        saveBooks()
+
     }
 
 
     // Update sessions for a book
     func updateSessions(for bookTitle: String, with updatedSessions: [[String: Any]]) {
-        sessions[bookTitle] = updatedSessions
-        saveBooks() // Ensure UserDefaults is updated
+
     }
+    
+    func getData() async {
+        guard let userId = Auth.auth().currentUser?.uid else { return }
+        let userRef = db.collection("users").document(userId)
+
+        do {
+            let snapshot = try await userRef.getDocument()
+            if let library = snapshot.data()?["library"] as? [String] {
+                print("🔄 Refreshing books from Firestore: \(library)")
+                await updateBooks(library)
+            } else {
+                print("⚠️ No books found, setting to empty list.")
+                await updateBooks([])
+            }
+        } catch {
+            print("❌ Error fetching books: \(error.localizedDescription)")
+        }
+    }
+    
     
     // Functions to assist with book details page
     func earliestSessionDate(for bookTitle : String) -> Date? {

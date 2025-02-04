@@ -19,8 +19,11 @@ class AuthViewModel: ObservableObject {
     @Published var userSession: FirebaseAuth.User?
     @Published var currentUser: User?
     @Published var authErrorMessage: String?
+    private let sessionsManager: SessionsManager
+
     
-    init() {
+    init(sessionManager: SessionsManager) {
+        self.sessionsManager = sessionManager
         self.userSession = Auth.auth().currentUser
         
         Task {
@@ -45,7 +48,8 @@ class AuthViewModel: ObservableObject {
             let result = try await Auth.auth().createUser(withEmail: email, password: password)
             self.userSession = result.user
             let user = User(id: result.user.uid, fullName: fullname, email: email)
-            let encodedUser = try Firestore.Encoder().encode(user)
+            var encodedUser = try Firestore.Encoder().encode(user)
+            encodedUser["library"] = []
             try await Firestore.firestore().collection("users").document(user.id).setData(encodedUser)
             await fetchUser()
         } catch let error as NSError {
@@ -93,6 +97,7 @@ class AuthViewModel: ObservableObject {
     
     func signOut() {
         do {
+            self.sessionsManager.updateBooks([])// Clear books on logout
             try Auth.auth().signOut()
             self.userSession = nil
             self.currentUser = nil
@@ -129,10 +134,36 @@ class AuthViewModel: ObservableObject {
     
     func fetchUser() async {
         guard let uid = Auth.auth().currentUser?.uid else { return }
-        guard let snapshot = try? await Firestore.firestore().collection("users").document(uid).getDocument() else { return }
-        self.currentUser = try? snapshot.data(as: User.self)
-        print("curret user is \(String(describing: self.currentUser))")
+
+        let userRef = Firestore.firestore().collection("users").document(uid)
+
+        do {
+            let snapshot = try await userRef.getDocument()
+
+            // Decode user profile
+            self.currentUser = try? snapshot.data(as: User.self)
+
+            // Fetch books from `library`
+            if let library = snapshot.data()?["library"] as? [String] {
+                print("✅ successfully pulled user library: \(library)")
+                await sessionsManager.updateBooks(library) // 🔹 Use `await` to ensure proper async handling
+                print("In fetchUser library is:  \(library)")
+            } else {
+                // Ensure `library` exists for new users
+                try await userRef.updateData(["library": []])
+                await sessionsManager.updateBooks([])
+            }
+        } catch {
+            print("❌ Error fetching user data: \(error.localizedDescription)")
+        }
+        print("at end of fetchUser, books are: \(sessionsManager.books)")
     }
+    
+    func reloadBooks() async {
+        
+    }
+
+    
     
     func resetPassword(withEmail email: String) async -> Bool {
         do {

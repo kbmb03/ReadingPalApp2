@@ -15,11 +15,12 @@ struct BookListView: View {
     @State private var newBookName = ""
     @State private var editMode: EditMode = .inactive // Local editMode state
     @State private var showDuplicateAlert = false // State to track duplicate book alert
+    @State private var refreshID = UUID() // Add this for force refresh
 
     var body: some View {
         NavigationView {
             List {
-                ForEach(sessionsManager.books, id: \.self) { book in
+                ForEach(sessionsManager.bookList(), id: \.self) { book in
                     NavigationLink(destination: BookSessionsView(bookTitle: book)) {
                         Text(book)
                     }
@@ -40,6 +41,14 @@ struct BookListView: View {
                     }
                 }
                 .font(.headline)
+            }
+            .onAppear {
+                DispatchQueue.main.async {
+                    sessionsManager.books = []
+                }
+                Task {
+                    await sessionsManager.getData()
+                }
             }
             .navigationTitle("My Books")
             .toolbar(.visible, for: .tabBar)
