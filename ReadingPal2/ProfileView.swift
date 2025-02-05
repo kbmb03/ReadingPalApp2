@@ -55,6 +55,11 @@ struct ProfileView: View {
                 
                 Section("Account") {
                     Button {
+                        print("syncing")
+                    } label: {
+                        SettingsRowView(imageName: "arrow.triangle.2.circlepath", title: "Sync Data", tintColor: .gray)
+                    }
+                    Button {
                         //viewModel.signOut()
                         showSignOutConfirmation = true
                     } label: {
