@@ -37,6 +37,9 @@ struct BookSessionsView: View {
             }
             .font(.headline)
         }
+        .onAppear {
+            sessionsManager.updateSessions(for: bookTitle)
+        }
         .fullScreenCover(isPresented: $showStartTimerView) {
             startTimerView(bookTitle: bookTitle)
                 .environmentObject(sessionsManager)
@@ -72,15 +75,20 @@ struct BookSessionsView: View {
     }
 
     private func deleteSession(at offsets: IndexSet) {
-        guard var bookSessions = sessionsManager.sessions[bookTitle] else { return }
-        bookSessions.remove(atOffsets: offsets)
-        sessionsManager.updateSessions(for: bookTitle, with: bookSessions)
+        guard let bookSessions = sessionsManager.sessions[bookTitle] else { return }
+
+        for index in offsets {
+            let sessionId = bookSessions[index]["id"] as? String ?? ""
+            if !sessionId.isEmpty {
+                sessionsManager.deleteSession(bookTitle: bookTitle, sessionId: sessionId)
+            }
+        }
     }
 
     private func moveSession(from source: IndexSet, to destination: Int) {
-        guard var bookSessions = sessionsManager.sessions[bookTitle] else { return }
-        bookSessions.move(fromOffsets: source, toOffset: destination)
-        sessionsManager.updateSessions(for: bookTitle, with: bookSessions)
+//        guard var bookSessions = sessionsManager.sessions[bookTitle] else { return }
+//        bookSessions.move(fromOffsets: source, toOffset: destination)
+//        sessionsManager.updateSessions(for: bookTitle, with: bookSessions)
     }
 
     private func sessionRow(for index: Int) -> some View {
@@ -95,7 +103,7 @@ struct BookSessionsView: View {
                             set: { newValue in
                                 var updatedSessions = bookSessions
                                 updatedSessions[index] = newValue
-                                sessionsManager.updateSessions(for: bookTitle, with: updatedSessions)
+                                //sessionsManager.updateSessions(for: bookTitle, with: updatedSessions)
                             }
                         ),
                         bookTitle: bookTitle

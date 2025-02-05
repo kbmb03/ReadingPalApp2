@@ -107,7 +107,7 @@ struct startTimerView: View {
             "startPage": startPage,
             "endPage": endPage,
             "pagesRead": pagesRead,
-            "summary": summary
+            "summary": summary,
         ]
         sessionsManager.addSession(to: bookTitle, session: session)
     }

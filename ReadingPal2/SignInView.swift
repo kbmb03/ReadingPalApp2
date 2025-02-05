@@ -11,13 +11,11 @@ import UIKit
 import FirebaseAuth
 
 struct SignInView: View {
-    //@EnvironmentObject var authManager: AuthManager
 
     @State private var email: String = ""
     @State private var password: String = ""
     @State private var errorMessage: String?
     @EnvironmentObject var viewModel: AuthViewModel
-    @EnvironmentObject var sessionsManager: SessionsManager
     
     var body: some View {
         NavigationStack {

@@ -19,94 +19,80 @@ class SessionsManager: ObservableObject {
     private var db = Firestore.firestore()
     
     
-
-    func loadFinishedBooks() {
-        
-    }
-    
-    // Save books
-    func saveBooks() {
-    }
-    
     func saveFinishedBooks() {
         
     }
     
-    // Add a new book
-//    func addBook(_ bookTitle: String) {
-//        guard let userId = Auth.auth().currentUser?.uid else { return }
-//        let userRef = db.collection("users").document(userId)
-//        let bookRef = userRef.collection("books").document(bookTitle)
-//
-//        if books.contains(bookTitle) { return } // Avoid duplicates
-//
-//        books.insert(bookTitle, at: 0) // Add to top of local list
-//
-//        let batch = db.batch()
-//        batch.setData(["library": books], forDocument: userRef, merge: true)
-//        batch.setData(["title": bookTitle], forDocument: bookRef)
-//        batch.commit { error in
-//            if let error = error {
-//                print("Error adding book: \(error.localizedDescription)")
-//            }
-//        }
-//    }
-    
-    
-
-
-    // Remove a book and its sessions
-    func removeBook(at offsets: IndexSet) {
-        guard let userId = Auth.auth().currentUser?.uid else { return }
-        let userRef = db.collection("users").document(userId)
-        
-        var updatedBooks = books
-        let removedBooks = offsets.map { updatedBooks[$0] }
-        
-        let batch = db.batch()
-        for book in removedBooks {
-            let bookRef = db.collection("users").document(userId).collection("books").document(book)
-            batch.deleteDocument(bookRef) // Delete book document
-        }
-        
-        updatedBooks.remove(atOffsets: offsets)
-        batch.updateData(["library": updatedBooks], forDocument: userRef) // Update Firestore
-        
-        batch.commit { error in
-            if let error = error {
-                print("Error updating book list: \(error.localizedDescription)")
-            }
-        }
-        DispatchQueue.main.async {
-            self.books = updatedBooks
-        }
-    }
-    
-    func moveBook(from source: IndexSet, to destination: Int) {
-        guard let userId = Auth.auth().currentUser?.uid else { return }
-        let userRef = db.collection("users").document(userId)
-        
-        books.move(fromOffsets: source, toOffset: destination)
-        
-        userRef.updateData(["library": books]) { error in
-            if let error = error {
-                print("Error updating book order: \(error.localizedDescription)")
-            }
-        }
-    }
-
 
     // Add a session to a book
     func addSession(to bookTitle: String, session: [String: Any]) {
+        guard let userId = Auth.auth().currentUser?.uid else { return }
+        let bookRef = db.collection("users").document(userId).collection("books").document(bookTitle)
+        let sessionRef = bookRef.collection("sessions").document()
 
+        var newSession = session
+        newSession["id"] = sessionRef.documentID  // Store Firestore-generated session ID
+
+        sessionRef.setData(newSession) { error in
+            if let error = error {
+                print("❌ Error adding session: \(error.localizedDescription)")
+            } else {
+                print("✅ Session successfully added for book: \(bookTitle)")
+                
+                DispatchQueue.main.async {
+                    self.sessions[bookTitle, default: []].append(newSession)
+                }
+            }
+        }
+    }
+    
+    func deleteSession(bookTitle: String, sessionId: String) {
+        guard let userId = Auth.auth().currentUser?.uid else { return }
+        let sessionRef = db.collection("users").document(userId)
+            .collection("books").document(bookTitle)
+            .collection("sessions").document(sessionId)
+
+        sessionRef.delete { error in
+            if let error = error {
+                print("❌ Error deleting session: \(error.localizedDescription)")
+            } else {
+                print("✅ Session deleted successfully for book: \(bookTitle)")
+
+                DispatchQueue.main.async {
+                    // Remove the session from local storage
+                    self.sessions[bookTitle]?.removeAll { session in
+                        session["id"] as? String == sessionId
+                    }
+                }
+            }
+        }
     }
 
 
     // Update sessions for a book
-    func updateSessions(for bookTitle: String, with updatedSessions: [[String: Any]]) {
+    func updateSessions(for bookTitle: String) {
+        guard let userId = Auth.auth().currentUser?.uid else { return }
+        let sessionsRef = db.collection("users").document(userId).collection("books").document(bookTitle).collection("sessions")
 
+        sessionsRef.getDocuments { snapshot, error in
+            if let error = error {
+                print("❌ Error fetching sessions: \(error.localizedDescription)")
+                return
+            }
+
+            let fetchedSessions = snapshot?.documents.compactMap { doc -> [String: Any]? in
+                var data = doc.data()
+                data["id"] = doc.documentID  // Store Firestore ID
+                return data
+            } ?? []
+
+            DispatchQueue.main.async {
+                self.sessions[bookTitle] = fetchedSessions
+                print("✅ Fetched \(fetchedSessions.count) sessions for \(bookTitle)")
+            }
+        }
     }
-    
+
     
     // Functions to assist with book details page
     func earliestSessionDate(for bookTitle : String) -> Date? {
