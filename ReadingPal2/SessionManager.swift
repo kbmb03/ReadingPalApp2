@@ -92,6 +92,30 @@ class SessionsManager: ObservableObject {
             }
         }
     }
+    
+    func updateSessionSummary(bookTitle: String, sessionId: String, newSummary: String) {
+        guard let userId = Auth.auth().currentUser?.uid else { return }
+        
+        let sessionRef = db.collection("users").document(userId)
+            .collection("books").document(bookTitle)
+            .collection("sessions").document(sessionId)
+
+        sessionRef.updateData(["summary": newSummary]) { error in
+            if let error = error {
+                print("❌ Error updating session summary: \(error.localizedDescription)")
+            } else {
+                print("✅ Summary updated successfully for session \(sessionId)")
+                
+                // Update local state
+                DispatchQueue.main.async {
+                    if let index = self.sessions[bookTitle]?.firstIndex(where: { $0["id"] as? String == sessionId }) {
+                        self.sessions[bookTitle]?[index]["summary"] = newSummary
+                    }
+                }
+            }
+        }
+    }
+
 
     
     // Functions to assist with book details page
