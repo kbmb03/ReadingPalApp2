@@ -17,6 +17,7 @@ class SessionsManager: ObservableObject {
     @Published var sessions: [String: [[String: Any]]] = [:] // Sessions keyed by book title
     @Published var finishedBooks: [String : Date] = [:]
     private var db = Firestore.firestore()
+
     
     
     func saveFinishedBooks() {
@@ -31,20 +32,28 @@ class SessionsManager: ObservableObject {
         let sessionRef = bookRef.collection("sessions").document()
 
         var newSession = session
-        newSession["id"] = sessionRef.documentID  // Store Firestore-generated session ID
+        newSession["id"] = sessionRef.documentID
+        newSession["date"] = Timestamp() // Ensure Firestore timestamp is stored
+
+        let currentSessions = sessions[bookTitle] ?? []
+        let lowestIndex = (currentSessions.map { $0["orderIndex"] as? Int ?? 0 }.min() ?? 0)
+
+        newSession["orderIndex"] = lowestIndex - 1
 
         sessionRef.setData(newSession) { error in
             if let error = error {
-                print("❌ Error adding session: \(error.localizedDescription)")
+                print("Error adding session: \(error.localizedDescription)")
             } else {
-                print("✅ Session successfully added for book: \(bookTitle)")
+                print("New session added at the top with orderIndex: \(newSession["orderIndex"]!)")
                 
                 DispatchQueue.main.async {
-                    self.sessions[bookTitle, default: []].append(newSession)
+                    self.sessions[bookTitle]?.insert(newSession, at: 0)
                 }
             }
         }
     }
+
+
     
     func deleteSession(bookTitle: String, sessionId: String) {
         guard let userId = Auth.auth().currentUser?.uid else { return }
@@ -72,26 +81,81 @@ class SessionsManager: ObservableObject {
     // Update sessions for a book
     func updateSessions(for bookTitle: String) {
         guard let userId = Auth.auth().currentUser?.uid else { return }
-        let sessionsRef = db.collection("users").document(userId).collection("books").document(bookTitle).collection("sessions")
+        let sessionsRef = db.collection("users").document(userId)
+            .collection("books").document(bookTitle)
+            .collection("sessions")
 
+        // ✅ Fetch ALL sessions (even if they don't have "orderIndex")
         sessionsRef.getDocuments { snapshot, error in
             if let error = error {
                 print("❌ Error fetching sessions: \(error.localizedDescription)")
                 return
             }
 
-            let fetchedSessions = snapshot?.documents.compactMap { doc -> [String: Any]? in
+            guard let documents = snapshot?.documents else {
+                print("⚠️ No sessions found for \(bookTitle)")
+                return
+            }
+
+            print("📌 Fetched \(documents.count) sessions for \(bookTitle)")
+
+            var fetchedSessions = documents.compactMap { doc -> [String: Any]? in
                 var data = doc.data()
-                data["id"] = doc.documentID  // Store Firestore ID
+                data["id"] = doc.documentID
+
+                // ✅ Convert Timestamp to Date
+                if let timestamp = data["date"] as? Timestamp {
+                    data["date"] = timestamp.dateValue()
+                }
+
+                // ✅ Ensure "orderIndex" exists (set default if missing)
+                if data["orderIndex"] == nil {
+                    data["orderIndex"] = Int.max  // Push these to the end
+                }
+
                 return data
-            } ?? []
+            }
+
+            // ✅ Now Sort by Order Index
+            fetchedSessions.sort { ($0["orderIndex"] as? Int ?? Int.max) < ($1["orderIndex"] as? Int ?? Int.max) }
 
             DispatchQueue.main.async {
                 self.sessions[bookTitle] = fetchedSessions
-                print("✅ Fetched \(fetchedSessions.count) sessions for \(bookTitle)")
+                print("✅ Final sorted session count: \(fetchedSessions.count) for \(bookTitle)")
             }
         }
     }
+
+    
+    func updateSessionOrder(for bookTitle: String, newOrder: [[String: Any]]) {
+        guard let userId = Auth.auth().currentUser?.uid else { return }
+        let sessionsRef = db.collection("users").document(userId)
+            .collection("books").document(bookTitle)
+            .collection("sessions")
+
+        let batch = db.batch()
+        
+        for (index, session) in newOrder.enumerated() {
+            guard let sessionId = session["id"] as? String else { continue }
+            let sessionDoc = sessionsRef.document(sessionId)
+
+            // 🔹 Store new position index in Firestore
+            batch.updateData(["orderIndex": index], forDocument: sessionDoc)
+        }
+
+        batch.commit { error in
+            if let error = error {
+                print("❌ Error saving session order: \(error.localizedDescription)")
+            } else {
+                print("✅ Session order updated for \(bookTitle)")
+            }
+        }
+        
+        DispatchQueue.main.async {
+            self.sessions[bookTitle] = newOrder
+        }
+    }
+
     
     func updateSessionSummary(bookTitle: String, sessionId: String, newSummary: String) {
         guard let userId = Auth.auth().currentUser?.uid else { return }

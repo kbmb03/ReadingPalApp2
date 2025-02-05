@@ -86,10 +86,13 @@ struct BookSessionsView: View {
     }
 
     private func moveSession(from source: IndexSet, to destination: Int) {
-//        guard var bookSessions = sessionsManager.sessions[bookTitle] else { return }
-//        bookSessions.move(fromOffsets: source, toOffset: destination)
-//        sessionsManager.updateSessions(for: bookTitle, with: bookSessions)
+        guard var bookSessions = sessionsManager.sessions[bookTitle] else { return }
+        
+        bookSessions.move(fromOffsets: source, toOffset: destination) // Move in local UI
+        
+        sessionsManager.updateSessionOrder(for: bookTitle, newOrder: bookSessions)
     }
+
 
     private func sessionRow(for index: Int) -> some View {
         Group {
