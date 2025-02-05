@@ -101,7 +101,7 @@ struct startTimerView: View {
         let pagesRead = max(end - start, 0)
         let session: [String: Any] = [
             "id": UUID().uuidString,
-            "name": sessionName.isEmpty ? "Session \(sessionsManager.sessions[bookTitle]?.count ?? 0 + 1)" : sessionName,
+            "name": sessionName.isEmpty ? "Session \((sessionsManager.sessions[bookTitle]?.count ?? 0) + 1)" : sessionName,
             "duration": formatDuration(timeElapsed),
             "date": Date(),
             "startPage": startPage,

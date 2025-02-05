@@ -62,10 +62,6 @@ struct BookSessionView: View {
 
     private func saveSummary() {
         guard let sessionId = session["id"] as? String else { return }
-        
-        // Update in Firestore
         sessionsManager.updateSessionSummary(bookTitle: bookTitle, sessionId: sessionId, newSummary: editedSummary)
-        
-        // Update locally
         session["summary"] = editedSummary
     }}
