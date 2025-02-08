@@ -38,7 +38,10 @@ struct BookSessionsView: View {
             .font(.headline)
         }
         .onAppear {
-            sessionsManager.updateSessions(for: bookTitle)
+            if sessionsManager.sessions[bookTitle] == nil {
+                sessionsManager.sessions[bookTitle] = []
+                print("Initialized empty session list for \(bookTitle) on first appearance.")
+            }
         }
         .fullScreenCover(isPresented: $showStartTimerView) {
             startTimerView(bookTitle: bookTitle)
@@ -96,29 +99,36 @@ struct BookSessionsView: View {
 
     private func sessionRow(for index: Int) -> some View {
         Group {
-            if let bookSessions = sessionsManager.sessions[bookTitle] {
+            if let bookSessions = sessionsManager.sessions[bookTitle], index < bookSessions.count {
                 let session = bookSessions[index]
                 let sessionName = session["name"] as? String ?? "Session \(index + 1)"
-                NavigationLink(
-                    destination: BookSessionView(
-                        session: Binding(
-                            get: { bookSessions[index] },
-                            set: { newValue in
-                                var updatedSessions = bookSessions
-                                updatedSessions[index] = newValue
-                                //sessionsManager.updateSessions(for: bookTitle, with: updatedSessions)
-                            }
-                        ),
-                        bookTitle: bookTitle
-                    )
-                ) {
-                    Text(sessionName)
+                let pagesRead = session["pagesRead"] as? Int ?? 0
+                let sessionDate = (session["date"] as? Date)?.formatted() ?? "Unknown Date"
+                let isSynced = session["needsSync"] as? Bool ?? false
+
+                NavigationLink(destination: BookSessionView(
+                    session: Binding(
+                        get: { bookSessions[index] },
+                        set: { newValue in
+                            var updatedSessions = bookSessions
+                            updatedSessions[index] = newValue
+                        }
+                    ),
+                    bookTitle: bookTitle
+                )) {
+                    VStack(alignment: .leading) {
+                        Text(sessionName).font(.headline)
+                    }
                 }
             } else {
-                EmptyView() // Fallback if sessions are not available
+                Text("Session not available")  // Ensure a valid return type
+                    .foregroundColor(.gray)
+                    .font(.subheadline)
             }
         }
     }
+
+
 
     private var noSessionsView: some View {
         Text("No sessions available")

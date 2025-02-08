@@ -29,8 +29,6 @@ class AuthViewModel: ObservableObject {
     init(sessionManager: SessionsManager) {
         self.sessionsManager = sessionManager
         self.userSession = Auth.auth().currentUser
-        self.currentUser = nil
-        self.userSession = nil
         self.books = []
         Task {
             await fetchUser()
@@ -225,7 +223,7 @@ class AuthViewModel: ObservableObject {
     
     func removeBook(at index: Int) {
         guard index < books.count else {
-            print("❌ Error: Index out of range")
+            print("Error: Index out of range")
             return
         }
 
@@ -233,8 +231,9 @@ class AuthViewModel: ObservableObject {
 
         // 🔹 Remove from books first (to keep UI in sync)
         DispatchQueue.main.async {
-                self.books.remove(at: index)
-            print("📌 Updated books list after deletion: \(self.books)")
+            self.books.remove(at: index)
+            self.sessionsManager.sessions[title] = nil
+            print("Updated books list after deletion: \(self.books)")
         }
 
         let context = PersistenceController.shared.container.viewContext
@@ -249,7 +248,7 @@ class AuthViewModel: ObservableObject {
                 context.delete(book)
             }
             try context.save()
-            print("✅ Book deleted from CoreData: \(title)")
+            print("Book deleted from CoreData: \(title)")
 
             // Add to deletionQueue for Firestore sync
             DeletionQueue.shared.addBookToDelete(title)
@@ -282,13 +281,13 @@ class AuthViewModel: ObservableObject {
         newBook.lastUpdated = Date()
         newBook.orderIndex = highestOrderIndex + 1  // New books go to the top
         newBook.needsSync = true
-
         do {
             try context.save()
             print("Book successfully saved in CoreData: \(title)")
             DispatchQueue.main.async {
                 self.books.insert(title, at: 0)
                 print("Updated books list: \(self.books)")
+                self.sessionsManager.sessions[title] = []
             }
         } catch {
             print("error saving book: \(error.localizedDescription)")
@@ -400,11 +399,11 @@ class AuthViewModel: ObservableObject {
 
                     if book.lastUpdated ?? Date() > firestoreTimestamp.dateValue() {
                         try await bookRef.setData(bookData, merge: true)
-                        print("✅ Updated Firestore book: \(String(describing: book.title))")
+                        print("Updated Firestore book: \(String(describing: book.title))")
                     }
                 } else {
                     try await bookRef.setData(bookData)
-                    print("✅ New book added to Firestore: \(String(describing: book.title))")
+                    print("New book added to Firestore: \(String(describing: book.title))")
                 }
 
                 let fetchSessions: NSFetchRequest<Sessions> = Sessions.fetchRequest()
@@ -427,11 +426,11 @@ class AuthViewModel: ObservableObject {
 
                         if session.lastUpdated ?? Date() > firestoreTimestamp.dateValue() {
                             try await sessionDoc.setData(sessionData, merge: true)
-                            print("✅ Updated Firestore session: \(String(describing: session.id))")
+                            print("Updated Firestore session: \(String(describing: session.id))")
                         }
                     } else {
                         try await sessionDoc.setData(sessionData)
-                        print("✅ New session added to Firestore: \(String(describing: session.id))")
+                        print("New session added to Firestore: \(String(describing: session.id))")
                     }
                 }
 

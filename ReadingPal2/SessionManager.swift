@@ -25,6 +25,35 @@ class SessionsManager: ObservableObject {
         
     }
     
+    func fetchSessionsFromCoreData(for bookTitle: String) {
+        let context = PersistenceController.shared.container.viewContext
+        let fetchRequest: NSFetchRequest<Sessions> = Sessions.fetchRequest()
+        fetchRequest.predicate = NSPredicate(format: "book.title == %@", bookTitle)
+        fetchRequest.sortDescriptors = [NSSortDescriptor(key: "date", ascending: false)]
+
+        do {
+            let fetchedSessions = try context.fetch(fetchRequest)
+            let sessionData = fetchedSessions.map { session in
+                return [
+                    "id": session.id ?? UUID().uuidString,
+                    "date": session.date ?? Date(),
+                    "lastUpdated": session.lastUpdated ?? Date(),
+                    "pagesRead": session.pagesRead,
+                    "summary": session.summary ?? "",
+                    "needsSync": session.needsSync  // Track sync status
+                ]
+            }
+
+            DispatchQueue.main.async {
+                self.sessions[bookTitle] = sessionData
+                print("Sessions updated from Core Data for \(bookTitle): \(sessionData.count) sessions")
+            }
+        } catch {
+            print("Error fetching sessions from Core Data: \(error.localizedDescription)")
+        }
+    }
+
+    
 
     // Add a session to a book
     func addSession(to bookTitle: String, sessionData: [String: Any]) {
@@ -41,22 +70,31 @@ class SessionsManager: ObservableObject {
             book = Book(context: context)
             book.title = bookTitle
             book.lastUpdated = Date()
-            book.needsSync = true  // ✅ New books need syncing
+            book.needsSync = true  // New books need syncing
         }
 
-        // 🔹 Create the new session
+        // Create the new session
         let newSession = Sessions(context: context)
         newSession.id = UUID().uuidString
         newSession.date = Date()
         newSession.lastUpdated = Date()
         newSession.pagesRead = Int64(sessionData["pagesRead"] as? Int ?? 0)
         newSession.summary = sessionData["summary"] as? String ?? ""
-        newSession.needsSync = true  // ✅ New sessions need syncing
+        newSession.needsSync = true  // New sessions need syncing
         newSession.book = book
 
         // 🔹 Save changes to CoreData
         do {
             try context.save()
+            
+            DispatchQueue.main.async {
+                if self.sessions[bookTitle] == nil {
+                    self.sessions[bookTitle] = []
+                }
+                self.sessions[bookTitle]?.append(sessionData)
+                print("Updated sessionsManager.sessions for \(bookTitle)")
+            }
+            
             print("Session saved to CoreData with needsSync = true")
         } catch {
             print("Error saving session: \(error.localizedDescription)")
@@ -73,9 +111,9 @@ class SessionsManager: ObservableObject {
 
         sessionRef.delete { error in
             if let error = error {
-                print("❌ Error deleting session: \(error.localizedDescription)")
+                print("Error deleting session: \(error.localizedDescription)")
             } else {
-                print("✅ Session deleted successfully for book: \(bookTitle)")
+                print("Session deleted successfully for book: \(bookTitle)")
 
                 DispatchQueue.main.async {
                     // Remove the session from local storage
