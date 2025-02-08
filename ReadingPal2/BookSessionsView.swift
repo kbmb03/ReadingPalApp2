@@ -40,7 +40,7 @@ struct BookSessionsView: View {
         .onAppear {
             if sessionsManager.sessions[bookTitle] == nil {
                 sessionsManager.sessions[bookTitle] = []
-                print("Initialized empty session list for \(bookTitle) on first appearance.")
+                sessionsManager.fetchSessionsFromCoreData(for: bookTitle)
             }
         }
         .fullScreenCover(isPresented: $showStartTimerView) {

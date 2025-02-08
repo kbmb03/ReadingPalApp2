@@ -30,6 +30,7 @@ class AuthViewModel: ObservableObject {
         self.sessionsManager = sessionManager
         self.userSession = Auth.auth().currentUser
         self.books = []
+        //self.sessionsManager.fetchSessionsFromCoreData()
         Task {
             await fetchUser()
             fetchBooksFromCoreData()
@@ -413,6 +414,7 @@ class AuthViewModel: ObservableObject {
                 for session in sessions {
                     let sessionDoc = bookRef.collection("sessions").document(session.id ?? "")
                     let sessionData: [String: Any] = [
+                        "name": session.name!,
                         "id": session.id!,
                         "date": session.date ?? Date(),
                         "lastUpdated": session.lastUpdated ?? Date(),

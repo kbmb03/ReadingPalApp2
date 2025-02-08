@@ -26,6 +26,7 @@ class SessionsManager: ObservableObject {
     }
     
     func fetchSessionsFromCoreData(for bookTitle: String) {
+        print("fetching sessions for \(bookTitle)")
         let context = PersistenceController.shared.container.viewContext
         let fetchRequest: NSFetchRequest<Sessions> = Sessions.fetchRequest()
         fetchRequest.predicate = NSPredicate(format: "book.title == %@", bookTitle)
@@ -40,10 +41,11 @@ class SessionsManager: ObservableObject {
                     "lastUpdated": session.lastUpdated ?? Date(),
                     "pagesRead": session.pagesRead,
                     "summary": session.summary ?? "",
+                    "name": session.name ?? "name unavailable",
                     "needsSync": session.needsSync  // Track sync status
                 ]
             }
-
+            print("got session Data: \(sessionData)")
             DispatchQueue.main.async {
                 self.sessions[bookTitle] = sessionData
                 print("Sessions updated from Core Data for \(bookTitle): \(sessionData.count) sessions")
@@ -59,7 +61,6 @@ class SessionsManager: ObservableObject {
     func addSession(to bookTitle: String, sessionData: [String: Any]) {
         let context = PersistenceController.shared.container.viewContext
 
-        // 🔹 Fetch or create the book
         let fetchRequest: NSFetchRequest<Book> = Book.fetchRequest()
         fetchRequest.predicate = NSPredicate(format: "title == %@", bookTitle)
 
@@ -73,33 +74,33 @@ class SessionsManager: ObservableObject {
             book.needsSync = true  // New books need syncing
         }
 
-        // Create the new session
         let newSession = Sessions(context: context)
+        newSession.name = sessionData["name"] as? String
         newSession.id = UUID().uuidString
         newSession.date = Date()
         newSession.lastUpdated = Date()
         newSession.pagesRead = Int64(sessionData["pagesRead"] as? Int ?? 0)
         newSession.summary = sessionData["summary"] as? String ?? ""
-        newSession.needsSync = true  // New sessions need syncing
+        newSession.needsSync = true
         newSession.book = book
+        print("newSession.name = \(newSession.name ?? "failure")")
 
-        // 🔹 Save changes to CoreData
         do {
             try context.save()
-            
+            print("Session saved to CoreData for \(bookTitle)")
+
             DispatchQueue.main.async {
                 if self.sessions[bookTitle] == nil {
                     self.sessions[bookTitle] = []
                 }
-                self.sessions[bookTitle]?.append(sessionData)
-                print("Updated sessionsManager.sessions for \(bookTitle)")
+                self.sessions[bookTitle]?.insert(sessionData, at: 0)
+                print("Updated sessionsManager.sessions for \(bookTitle), added at the top.")
             }
-            
-            print("Session saved to CoreData with needsSync = true")
         } catch {
             print("Error saving session: \(error.localizedDescription)")
         }
     }
+
 
 
     
@@ -133,30 +134,30 @@ class SessionsManager: ObservableObject {
             .collection("books").document(bookTitle)
             .collection("sessions")
 
-        // ✅ Fetch ALL sessions (even if they don't have "orderIndex")
+        // Fetch ALL sessions (even if they don't have "orderIndex")
         sessionsRef.getDocuments { snapshot, error in
             if let error = error {
-                print("❌ Error fetching sessions: \(error.localizedDescription)")
+                print("Error fetching sessions: \(error.localizedDescription)")
                 return
             }
 
             guard let documents = snapshot?.documents else {
-                print("⚠️ No sessions found for \(bookTitle)")
+                print("No sessions found for \(bookTitle)")
                 return
             }
 
-            print("📌 Fetched \(documents.count) sessions for \(bookTitle)")
+            print("Fetched \(documents.count) sessions for \(bookTitle)")
 
             var fetchedSessions = documents.compactMap { doc -> [String: Any]? in
                 var data = doc.data()
                 data["id"] = doc.documentID
 
-                // ✅ Convert Timestamp to Date
+                // Convert Timestamp to Date
                 if let timestamp = data["date"] as? Timestamp {
                     data["date"] = timestamp.dateValue()
                 }
 
-                // ✅ Ensure "orderIndex" exists (set default if missing)
+                // Ensure "orderIndex" exists (set default if missing)
                 if data["orderIndex"] == nil {
                     data["orderIndex"] = Int.max  // Push these to the end
                 }
