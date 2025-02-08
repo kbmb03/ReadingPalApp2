@@ -25,7 +25,7 @@ struct BookListView: View {
                     }
                 }
                 .onDelete(perform: { offsets in
-                    AuthView.removeBook(at: offsets)
+                    deleteBook(at: offsets)
                 })
                 .onMove(perform: { source, destination in
                     AuthView.moveBook(from: source, to: destination)
@@ -71,6 +71,12 @@ struct BookListView: View {
             })
         }
     }
+    
+    private func deleteBook(at offsets: IndexSet) {
+        for index in offsets {
+            AuthView.removeBook(at: index)
+        }
+    }
 
     private func validateAndAddBook() {
         guard !newBookName.isEmpty else { return }
@@ -79,7 +85,7 @@ struct BookListView: View {
             showDuplicateAlert = true
             newBookName = ""
         } else {
-            AuthView.addBook(newBookName)
+            AuthView.addBook(title: newBookName)
             newBookName = ""
         }
     }

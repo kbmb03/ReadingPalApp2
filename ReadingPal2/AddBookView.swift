@@ -20,7 +20,7 @@ struct AddBookView: View {
                 .padding()
 
             Button("Add Book") {
-                authView.addBook(newBookTitle)
+                authView.addBook(title: newBookTitle)
                 dismiss()
             }
             .font(.headline)

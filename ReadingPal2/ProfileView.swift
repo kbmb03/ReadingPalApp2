@@ -55,9 +55,21 @@ struct ProfileView: View {
                 
                 Section("Account") {
                     Button {
-                        print("syncing")
+                        Task {
+                            isLoading = true
+                            await viewModel.syncWithFirestore()
+                            isLoading = false
+                        }
                     } label: {
-                        SettingsRowView(imageName: "arrow.triangle.2.circlepath", title: "Sync Data", tintColor: .gray)
+                        if isLoading {
+                            HStack {
+                                ProgressView()
+                                Text("Syncing...")
+                                    .foregroundStyle(.gray)
+                            }
+                        } else {
+                            SettingsRowView(imageName: "arrow.triangle.2.circlepath", title: "Sync Data", tintColor: .gray)
+                        }
                     }
                     Button {
                         //viewModel.signOut()

@@ -10,6 +10,7 @@ import SwiftUI
 import UserNotifications
 import Firebase
 import FirebaseAuth
+import CoreData
 
 @MainActor
 class SessionsManager: ObservableObject {
@@ -26,30 +27,39 @@ class SessionsManager: ObservableObject {
     
 
     // Add a session to a book
-    func addSession(to bookTitle: String, session: [String: Any]) {
-        guard let userId = Auth.auth().currentUser?.uid else { return }
-        let bookRef = db.collection("users").document(userId).collection("books").document(bookTitle)
-        let sessionRef = bookRef.collection("sessions").document()
+    func addSession(to bookTitle: String, sessionData: [String: Any]) {
+        let context = PersistenceController.shared.container.viewContext
 
-        var newSession = session
-        newSession["id"] = sessionRef.documentID
-        newSession["date"] = Timestamp() // Ensure Firestore timestamp is stored
+        // 🔹 Fetch or create the book
+        let fetchRequest: NSFetchRequest<Book> = Book.fetchRequest()
+        fetchRequest.predicate = NSPredicate(format: "title == %@", bookTitle)
 
-        let currentSessions = sessions[bookTitle] ?? []
-        let lowestIndex = (currentSessions.map { $0["orderIndex"] as? Int ?? 0 }.min() ?? 0)
+        let book: Book
+        if let existingBook = try? context.fetch(fetchRequest).first {
+            book = existingBook
+        } else {
+            book = Book(context: context)
+            book.title = bookTitle
+            book.lastUpdated = Date()
+            book.needsSync = true  // ✅ New books need syncing
+        }
 
-        newSession["orderIndex"] = lowestIndex - 1
+        // 🔹 Create the new session
+        let newSession = Sessions(context: context)
+        newSession.id = UUID().uuidString
+        newSession.date = Date()
+        newSession.lastUpdated = Date()
+        newSession.pagesRead = Int64(sessionData["pagesRead"] as? Int ?? 0)
+        newSession.summary = sessionData["summary"] as? String ?? ""
+        newSession.needsSync = true  // ✅ New sessions need syncing
+        newSession.book = book
 
-        sessionRef.setData(newSession) { error in
-            if let error = error {
-                print("Error adding session: \(error.localizedDescription)")
-            } else {
-                print("New session added at the top with orderIndex: \(newSession["orderIndex"]!)")
-                
-                DispatchQueue.main.async {
-                    self.sessions[bookTitle]?.insert(newSession, at: 0)
-                }
-            }
+        // 🔹 Save changes to CoreData
+        do {
+            try context.save()
+            print("Session saved to CoreData with needsSync = true")
+        } catch {
+            print("Error saving session: \(error.localizedDescription)")
         }
     }
 

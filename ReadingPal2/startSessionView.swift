@@ -109,7 +109,7 @@ struct startTimerView: View {
             "pagesRead": pagesRead,
             "summary": summary,
         ]
-        sessionsManager.addSession(to: bookTitle, session: session)
+        sessionsManager.addSession(to: bookTitle, sessionData: session)
     }
 
     private func formatDuration(_ time: TimeInterval) -> String {

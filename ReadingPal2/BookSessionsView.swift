@@ -75,22 +75,22 @@ struct BookSessionsView: View {
     }
 
     private func deleteSession(at offsets: IndexSet) {
-        guard let bookSessions = sessionsManager.sessions[bookTitle] else { return }
-
-        for index in offsets {
-            let sessionId = bookSessions[index]["id"] as? String ?? ""
-            if !sessionId.isEmpty {
-                sessionsManager.deleteSession(bookTitle: bookTitle, sessionId: sessionId)
-            }
-        }
+//        guard let bookSessions = sessionsManager.sessions[bookTitle] else { return }
+//
+//        for index in offsets {
+//            let sessionId = bookSessions[index]["id"] as? String ?? ""
+//            if !sessionId.isEmpty {
+//                sessionsManager.deleteSession(bookTitle: bookTitle, sessionId: sessionId)
+//            }
+//        }
     }
 
     private func moveSession(from source: IndexSet, to destination: Int) {
-        guard var bookSessions = sessionsManager.sessions[bookTitle] else { return }
-        
-        bookSessions.move(fromOffsets: source, toOffset: destination) // Move in local UI
-        
-        sessionsManager.updateSessionOrder(for: bookTitle, newOrder: bookSessions)
+//        guard var bookSessions = sessionsManager.sessions[bookTitle] else { return }
+//        
+//        bookSessions.move(fromOffsets: source, toOffset: destination) // Move in local UI
+//        
+//        sessionsManager.updateSessionOrder(for: bookTitle, newOrder: bookSessions)
     }
 
 
