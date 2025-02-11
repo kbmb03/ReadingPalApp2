@@ -30,6 +30,12 @@ class AuthViewModel: ObservableObject {
         self.sessionsManager = sessionManager
         self.userSession = Auth.auth().currentUser
         self.books = []
+
+        guard self.userSession != nil else {
+            print("No user is signed in. Skipping fetchUser() on init.")
+            self.loadingComplete = true
+            return
+        }
         Task {
             await fetchUser()
         }
@@ -37,6 +43,7 @@ class AuthViewModel: ObservableObject {
     
     
     func signIn(withEmail email: String, password: String) async throws {
+        print("signIn called")
         do {
             let result = try await Auth.auth().signIn(withEmail: email, password: password)
             self.userSession = result.user
@@ -64,14 +71,10 @@ class AuthViewModel: ObservableObject {
     }
     
     func signOut() {
-        Task {
-            await syncWithFirestore()
-    }
+//        Task {
+//            await syncWithFirestore()
+//    }
         clearCoreData()
-        finishSignOut()
-    }
-    
-    func finishSignOut() {
         do {
             try Auth.auth().signOut()
             self.userSession = nil
@@ -81,6 +84,7 @@ class AuthViewModel: ObservableObject {
             print("Sign-out error: \(error.localizedDescription)")
         }
     }
+    
     
     func clearCoreData() {
         KeychainHelper.delete("fullName")
@@ -105,6 +109,7 @@ class AuthViewModel: ObservableObject {
         } catch {
             print("error in deleting books")
         }
+        print("CoreData deleted")
     }
 
     
@@ -170,6 +175,7 @@ class AuthViewModel: ObservableObject {
 
     
     func fetchUser() async {
+        print("FETCH USER CALLED!!!!!")
         guard let uid = Auth.auth().currentUser?.uid else {
             print("No user signed in. ProfileView will not show.")
             self.loadingComplete = true
@@ -189,37 +195,40 @@ class AuthViewModel: ObservableObject {
             }
             self.loadingComplete = true
             return
-        }
-        let userRef = Firestore.firestore().collection("users").document(uid)
-
-        do {
-            let snapshot = try await userRef.getDocument()
-
-            if let userData = snapshot.data() {
-                let fullName = userData["fullName"] as? String ?? "Unknown"
-                let email = userData["email"] as? String ?? "No Email"
-                self.currentUser = User(id: uid, fullName: fullName, email: email)
+        } else {
+            print("fetching user down here")
+            let userRef = Firestore.firestore().collection("users").document(uid)
+            
+            do {
+                let snapshot = try await userRef.getDocument()
                 
-                KeychainHelper.set(fullName, forKey: "fullName")
-                KeychainHelper.set(email, forKey: "email")
-                print("Saved user data to Keychain.")
-                
-                if let library = userData["library"] as? [String] {
-                    for book in library {
-                        self.addBook(title: book)
-                        await sessionsManager.fetchAndStoreSessions(for: book)
+                if let userData = snapshot.data() {
+                    let fullName = userData["fullName"] as? String ?? "Unknown"
+                    let email = userData["email"] as? String ?? "No Email"
+                    self.currentUser = User(id: uid, fullName: fullName, email: email)
+                    
+                    KeychainHelper.set(fullName, forKey: "fullName")
+                    KeychainHelper.set(email, forKey: "email")
+                    print("Saved user data to Keychain.")
+                    
+                    if let library = userData["library"] as? [String] {
+                        for book in library {
+                            print("looping though \(book)")
+                            self.addBook(title: book)
+                            await sessionsManager.fetchAndStoreSessions(for: book)
+                        }
+                        UserDefaults.standard.set(library, forKey: "library")
+                    } else {
+                        self.books = []
+                        UserDefaults.standard.removeObject(forKey: "library")
                     }
-                    UserDefaults.standard.set(library, forKey: "library")
                 } else {
                     self.books = []
-                    UserDefaults.standard.removeObject(forKey: "library")
+                    print("No user data found in firestore")
                 }
-            } else {
-                self.books = []
-                print("No user data found in firestore")
+            } catch {
+                print("Error fetching user data: \(error.localizedDescription)")
             }
-        } catch {
-            print("Error fetching user data: \(error.localizedDescription)")
         }
         self.loadingComplete = true
     }
@@ -303,7 +312,7 @@ class AuthViewModel: ObservableObject {
             DispatchQueue.main.async {
                 self.books.insert(title, at: 0)
                 UserDefaults.standard.set(self.books, forKey: "library")
-                print("Updated books list: \(self.books)")
+                print("Updated books list in addBook: \(self.books)")
                 self.sessionsManager.sessions[title] = []
             }
         } catch {
@@ -321,10 +330,13 @@ class AuthViewModel: ObservableObject {
         do {
             let fetchedBooks = try context.fetch(fetchRequest)
             let bookTitles = fetchedBooks.compactMap { $0.title }
+            for title in bookTitles {
+                print("titles in loop are: \(title)")
+            }
             if !bookTitles.isEmpty && self.books == [] {
                 DispatchQueue.main.async {
                     self.books = bookTitles
-                    print("updated books list: \(self.books)")
+                    print("updated books list in fetchBookFromCoreData: \(self.books)")
 //                    for book in self.books {
 //                        print("calling fetchSessionsFromCoreData for \(book)")
 //                        self.sessionsManager.fetchSessionsFromCoreData(for: book)

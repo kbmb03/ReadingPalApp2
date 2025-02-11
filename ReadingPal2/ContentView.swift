@@ -12,11 +12,6 @@ struct ContentView: View {
     var body: some View {
         if !viewModel.loadingComplete {
             ProgressView("Loading books...")
-                .onAppear {
-                    Task {
-                        await viewModel.fetchUser()
-                    }
-                }
         } else {
             Group {
                 if viewModel.userSession != nil {
