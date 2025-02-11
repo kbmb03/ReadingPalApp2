@@ -212,7 +212,7 @@ class AuthViewModel: ObservableObject {
                     print("Saved user data to Keychain.")
                     
                     if let library = userData["library"] as? [String] {
-                        for book in library {
+                        for book in library.reversed() {
                             print("looping though \(book)")
                             self.addBook(title: book)
                             await sessionsManager.fetchAndStoreSessions(for: book)
