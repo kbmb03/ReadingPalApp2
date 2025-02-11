@@ -14,10 +14,10 @@ struct PersistenceController {
     let container: NSPersistentContainer
 
     init() {
-        container = NSPersistentContainer(name: "ReadingPalCore")  // 🔹 Name should match the .xcdatamodeld file
+        container = NSPersistentContainer(name: "ReadingPalCore")
         container.loadPersistentStores { _, error in
             if let error = error as NSError? {
-                fatalError("❌ Unresolved error \(error), \(error.userInfo)")
+                fatalError("Unresolved error \(error), \(error.userInfo)")
             }
         }
     }

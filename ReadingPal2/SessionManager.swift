@@ -20,11 +20,6 @@ class SessionsManager: ObservableObject {
     private var db = Firestore.firestore()
 
     
-    
-    func saveFinishedBooks() {
-        
-    }
-    
     func fetchSessionsFromCoreData(for bookTitle: String) {
         print("Fetching sessions from Core Data for \(bookTitle)")
         let context = PersistenceController.shared.container.viewContext
@@ -81,40 +76,38 @@ class SessionsManager: ObservableObject {
             book.needsSync = true
         }
 
-        // 🔹 Create a new session every time
+        // Create a new session every time
         let newSession = Sessions(context: context)
         newSession.id = UUID().uuidString  // Ensure unique session ID
-        newSession.name = sessionData["name"] as? String ?? "Unnamed Session"
         newSession.date = Date()
         newSession.lastUpdated = Date()
         newSession.pagesRead = Int64(sessionData["pagesRead"] as? Int ?? 0)
         newSession.summary = sessionData["summary"] as? String ?? ""
         newSession.needsSync = true
         newSession.book = book  // Link session to book
+        newSession.name = sessionData["name"] as? String
+        
+        let sessionFetch : NSFetchRequest<Sessions> = Sessions.fetchRequest()
+        sessionFetch.predicate = NSPredicate(format: "book.title == %@", bookTitle)
 
         do {
             try context.save()
-            print("✅ Session successfully saved to CoreData for \(bookTitle)")
+            print("Session successfully saved to CoreData for \(bookTitle)")
 
-            // 🔹 Fetch all sessions for this book again to confirm multiple sessions are stored
+            // Fetch all sessions for this book again to confirm multiple sessions are stored
             let sessionFetch: NSFetchRequest<Sessions> = Sessions.fetchRequest()
             sessionFetch.predicate = NSPredicate(format: "book.title == %@", bookTitle)
             let savedSessions = try context.fetch(sessionFetch)
-
-            print("📌 Total sessions stored in CoreData for \(bookTitle): \(savedSessions.count)")
-            for session in savedSessions {
-                print("   - Session ID: \(session.id ?? "Unknown"), Name: \(session.name ?? "Unknown")")
-            }
 
             DispatchQueue.main.async {
                 if self.sessions[bookTitle] == nil {
                     self.sessions[bookTitle] = []
                 }
                 self.sessions[bookTitle]?.insert(sessionData, at: 0)
-                print("📌 Updated sessionsManager.sessions for \(bookTitle), added at the top.")
+                print("Updated sessionsManager.sessions for \(bookTitle), added at the top.")
             }
         } catch {
-            print("❌ Error saving session: \(error.localizedDescription)")
+            print("Error saving session: \(error.localizedDescription)")
         }
     }
 
@@ -214,144 +207,11 @@ class SessionsManager: ObservableObject {
 
     // Update sessions for a book
     func updateSessions(for bookTitle: String) {
-        guard let userId = Auth.auth().currentUser?.uid else { return }
-        let sessionsRef = db.collection("users").document(userId)
-            .collection("books").document(bookTitle)
-            .collection("sessions")
-
-        sessionsRef.getDocuments { snapshot, error in
-            if let error = error {
-                print("Error fetching sessions: \(error.localizedDescription)")
-                return
-            }
-
-            guard let documents = snapshot?.documents else {
-                print("No sessions found for \(bookTitle)")
-                return
-            }
-
-            print("Fetched \(documents.count) sessions for \(bookTitle) from Firestore")
-
-            let context = PersistenceController.shared.container.viewContext
-            var fetchedSessions: [[String: Any]] = []
-
-            for doc in documents {
-                var data = doc.data()
-                data["id"] = doc.documentID
-
-                // Convert Timestamp to Date
-                if let timestamp = data["date"] as? Timestamp {
-                    data["date"] = timestamp.dateValue()
-                }
-                if let lastUpdated = data["lastUpdated"] as? Timestamp {
-                    data["lastUpdated"] = lastUpdated.dateValue()
-                }
-
-                fetchedSessions.append(data)
-
-                // 🔹 Ensure session is saved in Core Data
-                let fetchRequest: NSFetchRequest<Sessions> = Sessions.fetchRequest()
-                fetchRequest.predicate = NSPredicate(format: "id == %@", doc.documentID)
-
-                do {
-                    let existingSession = try context.fetch(fetchRequest).first
-                    let session: Sessions
-
-                    if let existing = existingSession {
-                        session = existing
-                    } else {
-                        session = Sessions(context: context)
-                        session.id = doc.documentID
-                        session.book = try? context.fetch(NSFetchRequest<Book>(entityName: "Book"))
-                            .first(where: { $0.title == bookTitle })
-                    }
-
-                    session.date = data["date"] as? Date ?? Date()
-                    session.lastUpdated = data["lastUpdated"] as? Date ?? Date()
-                    session.pagesRead = Int64(data["pagesRead"] as? Int ?? 0)
-                    session.summary = data["summary"] as? String ?? ""
-                    session.name = data["name"] as? String ?? "Unnamed Session"
-                    session.needsSync = false  // Mark as synced
-
-                } catch {
-                    print("❌ Error fetching or creating session in Core Data: \(error.localizedDescription)")
-                }
-            }
-
-            // 🔹 Save Core Data changes
-            do {
-                try context.save()
-                print("✅ Synced sessions saved to Core Data for \(bookTitle)")
-            } catch {
-                print("❌ Error saving sessions to Core Data: \(error.localizedDescription)")
-            }
-
-            // 🔹 Update session list in SessionsManager
-            DispatchQueue.main.async {
-                self.sessions[bookTitle] = fetchedSessions
-                print("✅ Updated sessionsManager.sessions for \(bookTitle) with Firestore data")
-            }
-        }
-    }
-
-
-    
-    func updateSessionOrder(for bookTitle: String, newOrder: [[String: Any]]) {
-        guard let userId = Auth.auth().currentUser?.uid else { return }
-        let sessionsRef = db.collection("users").document(userId)
-            .collection("books").document(bookTitle)
-            .collection("sessions")
-
-        let batch = db.batch()
         
-        for (index, session) in newOrder.enumerated() {
-            guard let sessionId = session["id"] as? String else { continue }
-            let sessionDoc = sessionsRef.document(sessionId)
-
-            // 🔹 Store new position index in Firestore
-            batch.updateData(["orderIndex": index], forDocument: sessionDoc)
-        }
-
-        batch.commit { error in
-            if let error = error {
-                print("❌ Error saving session order: \(error.localizedDescription)")
-            } else {
-                print("✅ Session order updated for \(bookTitle)")
-            }
-        }
-        
-        DispatchQueue.main.async {
-            self.sessions[bookTitle] = newOrder
-        }
     }
 
     
-    func updateSessionSummary(bookTitle: String, sessionId: String, newSummary: String) {
-        guard let userId = Auth.auth().currentUser?.uid else { return }
-        
-        let sessionRef = db.collection("users").document(userId)
-            .collection("books").document(bookTitle)
-            .collection("sessions").document(sessionId)
-
-        sessionRef.updateData(["summary": newSummary]) { error in
-            if let error = error {
-                print("❌ Error updating session summary: \(error.localizedDescription)")
-            } else {
-                print("✅ Summary updated successfully for session \(sessionId)")
-                
-                // Update local state
-                DispatchQueue.main.async {
-                    if let index = self.sessions[bookTitle]?.firstIndex(where: { $0["id"] as? String == sessionId }) {
-                        self.sessions[bookTitle]?[index]["summary"] = newSummary
-                    }
-                }
-            }
-        }
-    }
-
-
-    
-    // Functions to assist with book details page
+    // Functions to assist with book details page///
     func earliestSessionDate(for bookTitle : String) -> Date? {
         guard let sessions = sessions[bookTitle] else {
             return nil
@@ -389,37 +249,11 @@ class SessionsManager: ObservableObject {
         return sessions[bookTitle]?.count ?? 0
     }
     
-    func markBookAsFinished(for bookTitle: String) {
-        finishedBooks[bookTitle] = Date()
-        saveFinishedBooks()
-    }
-    
-    func finishedDate(for bookTitle: String) -> Date? {
-        return finishedBooks[bookTitle]
-    }
-    
-    func reOpenBook(for bookTitle: String) {
-        finishedBooks.removeValue(forKey: bookTitle)
-        saveFinishedBooks()
-    }
-    
-    func isBookFinished(for bookTitle: String) -> Bool {
-        return finishedBooks[bookTitle] != nil
-    }
-    
-    func setFinishedDate(for bookTitle: String, to selectedDate: Date) {
-        finishedBooks[bookTitle] = selectedDate
-        saveFinishedBooks()
-    }
-    
     func syncSessions(for bookTitle: String) async {
-        print("running syncSessions")
         guard let userId = Auth.auth().currentUser?.uid else {
-            print("❌ No user ID found, skipping session sync.")
+            print("No user ID found, skipping session sync.")
             return
         }
-        print("🔄 Syncing sessions for \(bookTitle)...")
-
         let bookRef = db.collection("users").document(userId).collection("books").document(bookTitle)
         let sessionsRef = bookRef.collection("sessions")
         
@@ -429,7 +263,6 @@ class SessionsManager: ObservableObject {
 
         do {
             let firestoreSnapshot = try await sessionsRef.getDocuments()
-            print("🔍 Found \(firestoreSnapshot.documents.count) sessions in Firestore for \(bookTitle).")
 
             var firestoreSessions: [String: [String: Any]] = [:]
 
@@ -468,7 +301,7 @@ class SessionsManager: ObservableObject {
                         localSession.summary = firestoreData["summary"] as? String ?? ""
                         localSession.name = firestoreData["name"] as? String ?? "Unnamed Session"
                         localSession.needsSync = false
-                        print("✅ Updated local session \(sessionID) from Firestore")
+                        print("Updated local session \(sessionID) from Firestore")
                     }
                 } else {
                     let newSession = Sessions(context: context)
@@ -486,7 +319,7 @@ class SessionsManager: ObservableObject {
                         newSession.book = book
                     }
 
-                    print("✅ Added session \(sessionID) from Firestore to Core Data")
+                    print("Added session \(sessionID) from Firestore to Core Data")
                 }
             }
 
@@ -501,21 +334,46 @@ class SessionsManager: ObservableObject {
                         "summary": localSession.summary ?? ""
                     ]
                     try await sessionsRef.document(sessionID).setData(sessionData)
-                    print("✅ Uploaded local session \(sessionID) to Firestore")
+                    print("Uploaded local session \(sessionID) to Firestore")
                 }
             }
 
             try context.save()
-            print("✅ Sync complete for book \(bookTitle): Core Data and Firestore merged")
+            print("Sync complete for book \(bookTitle): Core Data and Firestore merged")
 
             DispatchQueue.main.async {
                 self.fetchSessionsFromCoreData(for: bookTitle)  // Refresh UI after sync
             }
 
         } catch {
-            print("❌ Error syncing sessions: \(error.localizedDescription)")
+            print("Error syncing sessions: \(error.localizedDescription)")
+        }
+    }
+    
+    func removeSession(title: String, at Index: Int) {
+        guard var bookSessions = self.sessions[title], Index < bookSessions.count else {
+            print("unable to get bookSessions or index out of range, returning")
+            return
+        }
+        let sessionToDelete = bookSessions[Index]
+        let sessionToDeleteID = sessionToDelete["id"] as? String ?? ""
+        
+        bookSessions.remove(at: Index)
+        self.sessions[title] = bookSessions
+        
+        let context = PersistenceController.shared.container.viewContext
+        let fetchRequest: NSFetchRequest<Sessions> = Sessions.fetchRequest()
+        fetchRequest.predicate = NSPredicate(format: "id == %@", sessionToDeleteID)
+        
+        do {
+            if let session = try context.fetch(fetchRequest).first {
+                context.delete(session)
+                try context.save()
+                print("session \(sessionToDelete) removed from coreData")
+            }
+        } catch {
+            print("error in deleting session \(sessionToDelete)")
         }
     }
 
-    
 }

@@ -31,40 +31,6 @@ struct BookInfoView : View {
                     .font(.headline)
                     .foregroundStyle(.gray)
             }
-            if let finishedDate = sessionsManager.finishedDate(for: bookTitle) {
-                Text("Date Finished: \(formatDate(finishedDate))")
-                    .font(.headline)
-                    .onTapGesture {
-                        if sessionsManager.isBookFinished(for: bookTitle) {
-                            selectedDate = finishedDate // Prepopulate with the existing date
-                            showingDatePicker = true
-                        }
-                    }
-            } else {
-                Text("Date Finished: N/A")
-                    .font(.headline)
-                    .foregroundColor(.gray)
-                    .onTapGesture {
-//                        if sessionsManager.isBookFinished(for: bookTitle) {
-//                            showingDatePicker = true
-//                        }
-                    }
-            }
-            Button(action: {
-                sessionsManager.isBookFinished(for: bookTitle)
-                ? sessionsManager.reOpenBook(for: bookTitle)
-                : sessionsManager.markBookAsFinished(for: bookTitle)
-            }) {
-                Text(sessionsManager.isBookFinished(for: bookTitle)
-                ? "Mark Book as Unfinished"
-                : "Mark Book as Finished")
-                    .font(.headline)
-                    .padding()
-                    .frame(maxWidth: .infinity)
-                    .background(Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(8)
-            }
             Spacer()
         }
         .padding()
@@ -87,11 +53,6 @@ struct BookInfoView : View {
                 DatePicker("Select Finished Date", selection: $selectedDate, displayedComponents: .date)
                     .datePickerStyle(GraphicalDatePickerStyle())
                     .padding()
-
-                Button("Save") {
-                    sessionsManager.setFinishedDate(for: bookTitle, to: selectedDate)
-                    showingDatePicker = false
-                }
                 .padding()
                 .background(Color.blue)
                 .foregroundColor(.white)

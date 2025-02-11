@@ -96,12 +96,33 @@ struct startTimerView: View {
     }
 
     private func saveSession() {
+        
+        var potentialName : String = sessionName
+        let existingSessionNames = Set(sessionsManager.sessions[bookTitle]?.compactMap { $0["name"] as? String } ?? [])
+
+        if !potentialName.isEmpty {
+            print("naming session \(sessionName)")
+        } else {
+            potentialName = "Session \((sessionsManager.sessions[bookTitle]?.count ?? 0) + 1)"
+            if existingSessionNames.contains(potentialName) {
+                var validName = false
+                var increment = 1
+                while !validName {
+                    print("trying name \(potentialName)")
+                    potentialName = "Session \((sessionsManager.sessions[bookTitle]?.count ?? 0) + 1 + increment)"
+                    validName = !existingSessionNames.contains(potentialName)
+                    increment += 1
+                }
+            }
+        }
+        print("potential name == \(potentialName)")
+        
         let start = Int(startPage) ?? 0
         let end = Int(endPage) ?? 0
         let pagesRead = max(end - start, 0)
         let session: [String: Any] = [
             "id": UUID().uuidString,
-            "name": sessionName.isEmpty ? "Session \((sessionsManager.sessions[bookTitle]?.count ?? 0) + 1)" : sessionName,
+            "name": potentialName,
             "duration": formatDuration(timeElapsed),
             "date": Date(),
             "startPage": startPage,

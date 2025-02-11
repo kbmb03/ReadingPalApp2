@@ -22,7 +22,6 @@ class NetworkMonitor: ObservableObject {
                 let wasDisconnected = !self.isConnected
                 self.isConnected = (path.status == .satisfied)
 
-                // 🔹 Only print message, but don't trigger sync automatically
                 if wasDisconnected && self.isConnected {
                     print("Back online. Network restored.")
                 }

@@ -22,7 +22,9 @@ struct BookSessionsView: View {
                 ForEach(bookSessions.indices, id: \.self) { index in
                     sessionRow(for: index)
                 }
-                .onDelete(perform: editMode?.wrappedValue.isEditing == true ? deleteSession : nil)
+                .onDelete(perform: { offsets in
+                    deleteSession(title: bookTitle, at: offsets)
+                })
                 .onMove(perform: editMode?.wrappedValue.isEditing == true ? moveSession : nil)
             } else {
                 noSessionsView
@@ -78,23 +80,14 @@ struct BookSessionsView: View {
         }
     }
 
-    private func deleteSession(at offsets: IndexSet) {
-//        guard let bookSessions = sessionsManager.sessions[bookTitle] else { return }
-//
-//        for index in offsets {
-//            let sessionId = bookSessions[index]["id"] as? String ?? ""
-//            if !sessionId.isEmpty {
-//                sessionsManager.deleteSession(bookTitle: bookTitle, sessionId: sessionId)
-//            }
-//        }
+    private func deleteSession(title: String, at offsets: IndexSet) {
+        for index in offsets {
+            sessionsManager.removeSession(title: title, at: index)
+        }
     }
 
     private func moveSession(from source: IndexSet, to destination: Int) {
-//        guard var bookSessions = sessionsManager.sessions[bookTitle] else { return }
-//        
-//        bookSessions.move(fromOffsets: source, toOffset: destination) // Move in local UI
-//        
-//        sessionsManager.updateSessionOrder(for: bookTitle, newOrder: bookSessions)
+
     }
 
 
@@ -103,9 +96,6 @@ struct BookSessionsView: View {
             if let bookSessions = sessionsManager.sessions[bookTitle], index < bookSessions.count {
                 let session = bookSessions[index]
                 let sessionName = session["name"] as? String ?? "Session \(index + 1)"
-                let pagesRead = session["pagesRead"] as? Int ?? 0
-                let sessionDate = (session["date"] as? Date)?.formatted() ?? "Unknown Date"
-                let isSynced = session["needsSync"] as? Bool ?? false
 
                 NavigationLink(destination: BookSessionView(
                     session: Binding(

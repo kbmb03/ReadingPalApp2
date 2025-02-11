@@ -71,9 +71,6 @@ class AuthViewModel: ObservableObject {
     }
     
     func signOut() {
-//        Task {
-//            await syncWithFirestore()
-//    }
         clearCoreData()
         do {
             try Auth.auth().signOut()
@@ -90,6 +87,7 @@ class AuthViewModel: ObservableObject {
         KeychainHelper.delete("fullName")
         KeychainHelper.delete("email")
         UserDefaults.standard.removeObject(forKey: "library")
+        UserDefaults.standard.removeObject(forKey: "sessionCounters")
         UserDefaults.standard.synchronize()
         let context = PersistenceController.shared.container.viewContext
             
@@ -337,10 +335,6 @@ class AuthViewModel: ObservableObject {
                 DispatchQueue.main.async {
                     self.books = bookTitles
                     print("updated books list in fetchBookFromCoreData: \(self.books)")
-//                    for book in self.books {
-//                        print("calling fetchSessionsFromCoreData for \(book)")
-//                        self.sessionsManager.fetchSessionsFromCoreData(for: book)
-//                    }
                 }
             }
         } catch {
@@ -348,27 +342,7 @@ class AuthViewModel: ObservableObject {
         }
     }
     
-    func isBooksEmpty() -> Bool {
-        let context = PersistenceController.shared.container.viewContext
-        let fetchRequest: NSFetchRequest<Book> = Book.fetchRequest()
-        fetchRequest.fetchLimit = 1  // Stop searching after finding one record
 
-        do {
-            let count = try context.count(for: fetchRequest)
-            return count == 0  // Returns `true` if no books exist
-        } catch {
-            print("Error checking Book entity: \(error.localizedDescription)")
-            return true  // Assume empty on error
-        }
-    }
-
-    
-    
-
-
-
-
-    
     func moveBook(from source: IndexSet, to destination: Int) {
         self.books.move(fromOffsets: source, toOffset: destination)
         UserDefaults.standard.set(self.books, forKey: "library")
@@ -527,7 +501,7 @@ class AuthViewModel: ObservableObject {
 
     
     func scheduleAutoSync() {
-        Timer.scheduledTimer(withTimeInterval: 604800, repeats: true) { _ in  // 🔹 7 days = 604800 seconds
+        Timer.scheduledTimer(withTimeInterval: 604800, repeats: true) { _ in
             Task {
                 if NetworkMonitor.shared.isConnected {
                     print("Auto-syncing after 7 days...")
