@@ -38,11 +38,12 @@ struct BookSessionsView: View {
             .font(.headline)
         }
         .onAppear {
-            if sessionsManager.sessions[bookTitle] == nil {
-                sessionsManager.sessions[bookTitle] = []
+            if sessionsManager.sessions[bookTitle] == nil || sessionsManager.sessions[bookTitle]?.isEmpty == true {
                 sessionsManager.fetchSessionsFromCoreData(for: bookTitle)
+                print("Fetching sessions from Core Data for \(bookTitle) on view appear.")
             }
         }
+
         .fullScreenCover(isPresented: $showStartTimerView) {
             startTimerView(bookTitle: bookTitle)
                 .environmentObject(sessionsManager)

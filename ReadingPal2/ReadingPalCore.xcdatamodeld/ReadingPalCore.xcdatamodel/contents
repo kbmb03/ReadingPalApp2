@@ -5,7 +5,7 @@
         <attribute name="needsSync" attributeType="Boolean" usesScalarValueType="YES"/>
         <attribute name="orderIndex" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="title" attributeType="String"/>
-        <relationship name="sessions" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Sessions" inverseName="book" inverseEntity="Sessions"/>
+        <relationship name="sessions" optional="YES" toMany="YES" deletionRule="Nullify" ordered="YES" destinationEntity="Sessions" inverseName="book" inverseEntity="Sessions"/>
     </entity>
     <entity name="Sessions" representedClassName="Sessions" syncable="YES" codeGenerationType="class">
         <attribute name="date" attributeType="Date" usesScalarValueType="NO"/>

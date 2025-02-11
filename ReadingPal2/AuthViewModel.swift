@@ -30,10 +30,8 @@ class AuthViewModel: ObservableObject {
         self.sessionsManager = sessionManager
         self.userSession = Auth.auth().currentUser
         self.books = []
-        //self.sessionsManager.fetchSessionsFromCoreData()
         Task {
             await fetchUser()
-            fetchBooksFromCoreData()
         }
     }
     
@@ -49,7 +47,7 @@ class AuthViewModel: ObservableObject {
                     if !snapshot.exists {
                         print("No user data found in Firestore. Blocking sign-in.")
                         
-                        try Auth.auth().signOut() // Immediately sign the user out
+                        try Auth.auth().signOut()
                         self.userSession = nil
                         DispatchQueue.main.async {
                             self.authErrorMessage = "Account does not exist. Please sign up."
@@ -85,6 +83,10 @@ class AuthViewModel: ObservableObject {
     }
     
     func clearCoreData() {
+        KeychainHelper.delete("fullName")
+        KeychainHelper.delete("email")
+        UserDefaults.standard.removeObject(forKey: "library")
+        UserDefaults.standard.synchronize()
         let context = PersistenceController.shared.container.viewContext
             
             // Delete all Books
@@ -173,40 +175,57 @@ class AuthViewModel: ObservableObject {
             self.loadingComplete = true
             return
         }
-        print("fetching User...")
+        
         
         self.loadingComplete = false
+        if let fullName = KeychainHelper.get("fullName"),
+           let email = KeychainHelper.get("email") {
+            self.currentUser = User(id: uid, fullName: fullName, email: email)
+            print("Loaded user info for \(fullName) from keychain")
+            
+            self.books = UserDefaults.standard.stringArray(forKey: "library") ?? []
+            for book in self.books {
+                sessionsManager.fetchSessionsFromCoreData(for: book)
+            }
+            self.loadingComplete = true
+            return
+        }
         let userRef = Firestore.firestore().collection("users").document(uid)
 
         do {
             let snapshot = try await userRef.getDocument()
 
             if let userData = snapshot.data() {
-                self.currentUser = User(
-                    id: uid,
-                    fullName: userData["fullName"] as? String ?? "Unknown",
-                    email: userData["email"] as? String ?? "No Email"
-                )
-                print("snapshot.data()[library] = \(userData["library"] ?? "failure")")
-                print("User fetched: \(self.currentUser?.fullName ?? "Unknown")")
+                let fullName = userData["fullName"] as? String ?? "Unknown"
+                let email = userData["email"] as? String ?? "No Email"
+                self.currentUser = User(id: uid, fullName: fullName, email: email)
+                
+                KeychainHelper.set(fullName, forKey: "fullName")
+                KeychainHelper.set(email, forKey: "email")
+                print("Saved user data to Keychain.")
+                
                 if let library = userData["library"] as? [String] {
-                    
-                    self.books = library
-                    print("successfully set books to \(library)")
+                    for book in library {
+                        self.addBook(title: book)
+                        await sessionsManager.fetchAndStoreSessions(for: book)
+                    }
+                    UserDefaults.standard.set(library, forKey: "library")
                 } else {
                     self.books = []
+                    UserDefaults.standard.removeObject(forKey: "library")
                 }
-                
             } else {
                 self.books = []
-                print("No user data found in Firestore.")
+                print("No user data found in firestore")
             }
-            
-            self.loadingComplete = true
         } catch {
             print("Error fetching user data: \(error.localizedDescription)")
         }
+        self.loadingComplete = true
     }
+    
+
+
 
 
     func resetPassword(withEmail email: String) async -> Bool {
@@ -230,12 +249,10 @@ class AuthViewModel: ObservableObject {
 
         let title = books[index]
 
-        // 🔹 Remove from books first (to keep UI in sync)
         DispatchQueue.main.async {
-            self.books.remove(at: index)
-            self.sessionsManager.sessions[title] = nil
-            print("Updated books list after deletion: \(self.books)")
+            self.books.remove(at: index)  // Update the UI first
         }
+        DeletionQueue.shared.addBookToDelete(title)
 
         let context = PersistenceController.shared.container.viewContext
         let fetchRequest: NSFetchRequest<Book> = Book.fetchRequest()
@@ -243,29 +260,27 @@ class AuthViewModel: ObservableObject {
 
         do {
             let booksToDelete = try context.fetch(fetchRequest)
-
-            // 🔹 Remove from CoreData
             for book in booksToDelete {
                 context.delete(book)
             }
             try context.save()
-            print("Book deleted from CoreData: \(title)")
 
-            // Add to deletionQueue for Firestore sync
-            DeletionQueue.shared.addBookToDelete(title)
-            print("📌 Book added to deletion queue: \(title)")
+            print("Book deleted from Core Data: \(title)")
+
+            DispatchQueue.main.async {
+                UserDefaults.standard.set(self.books, forKey: "library")  // Keep UserDefaults updated
+                self.sessionsManager.sessions[title] = nil  // Remove associated sessions
+            }
 
         } catch {
-            print("❌ Error deleting book: \(error.localizedDescription)")
+            print("Error deleting book: \(error.localizedDescription)")
         }
     }
 
-
-
     
     func addBook(title: String) {
-        guard !title.isEmpty else {
-            print("Not adding empty book title")
+        guard !title.isEmpty && !self.books.contains(title) else {
+            print("Not adding empty/existing book title")
             return
         }
 
@@ -287,6 +302,7 @@ class AuthViewModel: ObservableObject {
             print("Book successfully saved in CoreData: \(title)")
             DispatchQueue.main.async {
                 self.books.insert(title, at: 0)
+                UserDefaults.standard.set(self.books, forKey: "library")
                 print("Updated books list: \(self.books)")
                 self.sessionsManager.sessions[title] = []
             }
@@ -305,16 +321,37 @@ class AuthViewModel: ObservableObject {
         do {
             let fetchedBooks = try context.fetch(fetchRequest)
             let bookTitles = fetchedBooks.compactMap { $0.title }
-            if !bookTitles.isEmpty {
+            if !bookTitles.isEmpty && self.books == [] {
                 DispatchQueue.main.async {
                     self.books = bookTitles
                     print("updated books list: \(self.books)")
+//                    for book in self.books {
+//                        print("calling fetchSessionsFromCoreData for \(book)")
+//                        self.sessionsManager.fetchSessionsFromCoreData(for: book)
+//                    }
                 }
             }
         } catch {
             print("Error fetching books: \(error.localizedDescription)")
         }
     }
+    
+    func isBooksEmpty() -> Bool {
+        let context = PersistenceController.shared.container.viewContext
+        let fetchRequest: NSFetchRequest<Book> = Book.fetchRequest()
+        fetchRequest.fetchLimit = 1  // Stop searching after finding one record
+
+        do {
+            let count = try context.count(for: fetchRequest)
+            return count == 0  // Returns `true` if no books exist
+        } catch {
+            print("Error checking Book entity: \(error.localizedDescription)")
+            return true  // Assume empty on error
+        }
+    }
+
+    
+    
 
 
 
@@ -322,6 +359,7 @@ class AuthViewModel: ObservableObject {
     
     func moveBook(from source: IndexSet, to destination: Int) {
         self.books.move(fromOffsets: source, toOffset: destination)
+        UserDefaults.standard.set(self.books, forKey: "library")
     }
 
     
@@ -359,40 +397,57 @@ class AuthViewModel: ObservableObject {
     
     //Firestore Syncing:
     func syncWithFirestore() async {
-        guard let userId = Auth.auth().currentUser?.uid else { return }
+        guard let userId = Auth.auth().currentUser?.uid else {
+            print("❌ No user ID found, aborting sync.")
+            return
+        }
+
         let booksToDelete = DeletionQueue.shared.getBooksToDelete()
-        print("going to delete following from firestore: \(booksToDelete)")
-        // 🔹 Check for internet connection before syncing
+        
         if !NetworkMonitor.shared.isConnected {
             print("No internet connection. Sync postponed.")
             return
-        } else {
-            print("Internet Connection good, syncing...")
         }
 
-        let userRef = Firestore.firestore().collection("users").document(userId)
         print("🔄 Syncing data with Firestore...")
 
+        let userRef = Firestore.firestore().collection("users").document(userId)
         let context = PersistenceController.shared.container.viewContext
         let fetchRequest: NSFetchRequest<Book> = Book.fetchRequest()
 
         do {
-            let localBooks = try context.fetch(fetchRequest)
-//            if localBooks.isEmpty && booksToDelete.isEmpty {
-//                print("local books empty, returning")
-//                return
-//            }
+            // Fetch books from Core Data
+            var localBooks = try context.fetch(fetchRequest)
+
+            // 🔹 Ensure `localBooks` is not empty by using `self.books`
+            if localBooks.isEmpty {
+                print("⚠️ No books found in Core Data. Using `self.books` instead.")
+                for bookTitle in self.books {
+                    let newBook = Book(context: context)
+                    newBook.title = bookTitle
+                    newBook.lastUpdated = Date()
+                    newBook.needsSync = true
+                    localBooks.append(newBook)
+                }
+                try context.save()
+                print("✅ Created missing books in Core Data from `self.books`.")
+            }
+
             var latestBooks: [[String: Any]] = []
 
             for book in localBooks {
+                let bookTitle = book.title ?? ""
                 let bookData: [String: Any] = [
-                    "title": book.title ?? "",
+                    "title": bookTitle,
                     "lastUpdated": book.lastUpdated ?? Date(),
                     "orderIndex": book.orderIndex
                 ]
                 latestBooks.append(bookData)
 
-                let bookRef = userRef.collection("books").document(book.title ?? "")
+                let bookRef = userRef.collection("books").document(bookTitle)
+
+                print("🔍 Calling syncSessions for book: \(bookTitle)")
+                await sessionsManager.syncSessions(for: bookTitle)
 
                 let firestoreBook = try await bookRef.getDocument()
                 if let firestoreData = firestoreBook.data(),
@@ -400,49 +455,15 @@ class AuthViewModel: ObservableObject {
 
                     if book.lastUpdated ?? Date() > firestoreTimestamp.dateValue() {
                         try await bookRef.setData(bookData, merge: true)
-                        print("Updated Firestore book: \(String(describing: book.title))")
+                        print("✅ Updated Firestore book: \(bookTitle)")
                     }
                 } else {
                     try await bookRef.setData(bookData)
-                    print("New book added to Firestore: \(String(describing: book.title))")
-                }
-
-                let fetchSessions: NSFetchRequest<Sessions> = Sessions.fetchRequest()
-                fetchSessions.predicate = NSPredicate(format: "book.title == %@", book.title ?? "")
-                let sessions = try context.fetch(fetchSessions)
-
-                for session in sessions {
-                    let sessionDoc = bookRef.collection("sessions").document(session.id ?? "")
-                    let sessionData: [String: Any] = [
-                        "name": session.name!,
-                        "id": session.id!,
-                        "date": session.date ?? Date(),
-                        "lastUpdated": session.lastUpdated ?? Date(),
-                        "pagesRead": session.pagesRead,
-                        "summary": session.summary ?? ""
-                    ]
-
-                    let firestoreSession = try await sessionDoc.getDocument()
-                    if let firestoreSessionData = firestoreSession.data(),
-                       let firestoreTimestamp = firestoreSessionData["lastUpdated"] as? Timestamp {
-
-                        if session.lastUpdated ?? Date() > firestoreTimestamp.dateValue() {
-                            try await sessionDoc.setData(sessionData, merge: true)
-                            print("Updated Firestore session: \(String(describing: session.id))")
-                        }
-                    } else {
-                        try await sessionDoc.setData(sessionData)
-                        print("New session added to Firestore: \(String(describing: session.id))")
-                    }
-                }
-
-                book.needsSync = false
-                for session in sessions {
-                    session.needsSync = false
+                    print("✅ New book added to Firestore: \(bookTitle)")
                 }
             }
+
             try await userRef.setData(["library": self.books], merge: true)
-            print("✅ Updated Firestore library field. Library set to: \(self.books)")
             try await processDeletionQueue(userRef: userRef)
 
             try context.save()
@@ -453,6 +474,9 @@ class AuthViewModel: ObservableObject {
             print("❌ Error syncing: \(error.localizedDescription)")
         }
     }
+
+
+
 
     
     func processDeletionQueue(userRef: DocumentReference) async {
