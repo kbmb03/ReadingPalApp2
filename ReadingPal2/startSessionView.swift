@@ -17,6 +17,7 @@ struct startTimerView: View {
     @State private var summary = ""
     @State private var sessionName = ""
     @State private var showCancelConfirmation = false
+    @State private var showErrorInNamingSession = false
     @Environment(\.dismiss) var dismiss
 
     var body: some View {
@@ -75,10 +76,22 @@ struct startTimerView: View {
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Save") {
-                        saveSession()
-                        dismiss()
+                        let validName = validSessionName(title: sessionName)
+                        if validName {
+                            saveSession()
+                            dismiss()
+                        } else {
+                            showErrorInNamingSession = true
+                        }
+
                     }
                 }
+            }
+            .alert("Invalid Name", isPresented: $showErrorInNamingSession) {
+                Button("OK", role: .cancel) {
+                }
+            } message: {
+                Text("You already have a session named \(sessionName)")
             }
             .confirmationDialog("You Have Unsaved Changes", isPresented: $showCancelConfirmation, titleVisibility: .visible) {
                 Button("Discard Changes", role: .destructive) {
@@ -138,5 +151,11 @@ struct startTimerView: View {
         let minutes = Int(time) / 60
         let seconds = Int(time) % 60
         return String(format: "%02d:%02d", minutes, seconds)
+    }
+    
+    
+    private func validSessionName(title: String) -> Bool {
+        let existingSessionNames = Set(sessionsManager.sessions[bookTitle]?.compactMap { $0["name"] as? String } ?? [])
+        return !existingSessionNames.contains(title)
     }
 }
