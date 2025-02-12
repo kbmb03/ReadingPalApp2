@@ -375,5 +375,37 @@ class SessionsManager: ObservableObject {
             print("error in deleting session \(sessionToDelete)")
         }
     }
+    
+    func updateSessionSummary(bookTitle: String, sessionId: String, newSummary: String) {
+        let context = PersistenceController.shared.container.viewContext
+
+        let fetchRequest: NSFetchRequest<Sessions> = Sessions.fetchRequest()
+        fetchRequest.predicate = NSPredicate(format: "id == %@", sessionId)
+
+        do {
+            if let session = try context.fetch(fetchRequest).first {
+                session.summary = newSummary
+                session.lastUpdated = Date()
+                session.needsSync = true
+                
+                try context.save()
+                print("Session \(sessionId) updated in CoreData with new summary.")
+
+                // Update sessionsManager.sessions to reflect the change in UI
+                if let index = self.sessions[bookTitle]?.firstIndex(where: { $0["id"] as? String == sessionId }) {
+                    DispatchQueue.main.async {
+                        self.sessions[bookTitle]?[index]["summary"] = newSummary
+                        self.sessions[bookTitle]?[index]["lastUpdated"] = session.lastUpdated
+                        self.sessions[bookTitle]?[index]["needsSync"] = true
+                    }
+                    print("Updated session \(sessionId) in sessionsManager.sessions.")
+                }
+            } else {
+                print("Error: Session \(sessionId) not found in CoreData.")
+            }
+        } catch {
+            print("Error updating session summary: \(error.localizedDescription)")
+        }
+    }
 
 }

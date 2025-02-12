@@ -61,6 +61,11 @@ struct BookSessionView: View {
     }
     
     private func saveSummary() {
-        
+        guard let sessionID = session["id"] as? String else {
+            print("error: SessionID is missing")
+            return
+        }
+        sessionsManager.updateSessionSummary(bookTitle: bookTitle, sessionId: sessionID, newSummary: editedSummary)
+        session["summary"] = editedSummary
     }
 }
