@@ -48,6 +48,7 @@ class DeletionQueue {
 
     //  Clear queue after syncing with Firestore
     func clearQueue() {
+        print("DeletionQueue cleared")
         booksToDelete.removeAll()
         sessionsToDelete.removeAll()
         saveToStorage()

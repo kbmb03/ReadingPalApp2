@@ -79,6 +79,7 @@ class SessionsManager: ObservableObject {
         // Create a new session every time
         let newSession = Sessions(context: context)
         newSession.id = UUID().uuidString  // Ensure unique session ID
+        print("New session created with ID: \(newSession.id ?? "Unknown")")
         newSession.date = Date()
         newSession.lastUpdated = Date()
         newSession.pagesRead = Int64(sessionData["pagesRead"] as? Int ?? 0)
@@ -94,11 +95,6 @@ class SessionsManager: ObservableObject {
             try context.save()
             print("Session successfully saved to CoreData for \(bookTitle)")
 
-            // Fetch all sessions for this book again to confirm multiple sessions are stored
-            let sessionFetch: NSFetchRequest<Sessions> = Sessions.fetchRequest()
-            sessionFetch.predicate = NSPredicate(format: "book.title == %@", bookTitle)
-            let savedSessions = try context.fetch(sessionFetch)
-
             DispatchQueue.main.async {
                 if self.sessions[bookTitle] == nil {
                     self.sessions[bookTitle] = []
@@ -111,30 +107,6 @@ class SessionsManager: ObservableObject {
         }
     }
 
-
-
-    
-    func deleteSession(bookTitle: String, sessionId: String) {
-        guard let userId = Auth.auth().currentUser?.uid else { return }
-        let sessionRef = db.collection("users").document(userId)
-            .collection("books").document(bookTitle)
-            .collection("sessions").document(sessionId)
-
-        sessionRef.delete { error in
-            if let error = error {
-                print("Error deleting session: \(error.localizedDescription)")
-            } else {
-                print("Session deleted successfully for book: \(bookTitle)")
-
-                DispatchQueue.main.async {
-                    // Remove the session from local storage
-                    self.sessions[bookTitle]?.removeAll { session in
-                        session["id"] as? String == sessionId
-                    }
-                }
-            }
-        }
-    }
     
     func fetchAndStoreSessions(for bookTitle: String) async {
         guard let userId = Auth.auth().currentUser?.uid else { return }
@@ -350,40 +322,66 @@ class SessionsManager: ObservableObject {
         }
     }
     
-    func removeSession(title: String, at Index: Int) {
-        guard var bookSessions = self.sessions[title], Index < bookSessions.count else {
+    func removeSession(title: String, at index: Int) {
+        guard var bookSessions = self.sessions[title], index < bookSessions.count else {
             print("unable to get bookSessions or index out of range, returning")
             return
         }
-        let sessionToDelete = bookSessions[Index]
-        let sessionToDeleteID = sessionToDelete["id"] as? String ?? ""
-        
-        bookSessions.remove(at: Index)
-        self.sessions[title] = bookSessions
-        
+
+        let sessionToDelete = bookSessions[index]
+        guard let sessionToDeleteID = sessionToDelete["id"] as? String, !sessionToDeleteID.isEmpty else {
+            print("Session ID is missing or empty, aborting delete.")
+            return
+        }
+
+        // Add session to deletion queue
+        DeletionQueue.shared.addSessionToDelete(sessionToDeleteID)
+
         let context = PersistenceController.shared.container.viewContext
         let fetchRequest: NSFetchRequest<Sessions> = Sessions.fetchRequest()
         fetchRequest.predicate = NSPredicate(format: "id == %@", sessionToDeleteID)
-        
+
         do {
             if let session = try context.fetch(fetchRequest).first {
                 context.delete(session)
                 try context.save()
-                print("session \(sessionToDelete) removed from coreData")
+                print("Session \(sessionToDeleteID) removed from CoreData")
             }
         } catch {
-            print("error in deleting session \(sessionToDelete)")
+            print("Error deleting session \(sessionToDeleteID): \(error.localizedDescription)")
+            return
+        }
+        DispatchQueue.main.async {
+            bookSessions.remove(at: index)
+            self.sessions[title] = bookSessions
+            print("Session removed from sessionManager for \(title)")
         }
     }
+
     
     func updateSessionSummary(bookTitle: String, sessionId: String, newSummary: String) {
         let context = PersistenceController.shared.container.viewContext
 
         let fetchRequest: NSFetchRequest<Sessions> = Sessions.fetchRequest()
-        fetchRequest.predicate = NSPredicate(format: "id == %@", sessionId)
+        fetchRequest.predicate = NSPredicate(format: "SELF.id == %@", sessionId)
+        
 
         do {
+            let allSessions = try context.fetch(fetchRequest)
+            print("📌 Total sessions in Core Data: \(allSessions.count)")
+            for session in allSessions {
+                print("   - Stored session ID: \(session.id ?? "Unknown")")
+            }
+        } catch {
+            print("❌ Error fetching all sessions: \(error.localizedDescription)")
+        }
+        
+        
+        do {
+            let fetchedSessions = try context.fetch(fetchRequest)
+                    print("🛠 Fetched sessions count: \(fetchedSessions.count)")
             if let session = try context.fetch(fetchRequest).first {
+                
                 session.summary = newSummary
                 session.lastUpdated = Date()
                 session.needsSync = true
@@ -407,5 +405,4 @@ class SessionsManager: ObservableObject {
             print("Error updating session summary: \(error.localizedDescription)")
         }
     }
-
 }

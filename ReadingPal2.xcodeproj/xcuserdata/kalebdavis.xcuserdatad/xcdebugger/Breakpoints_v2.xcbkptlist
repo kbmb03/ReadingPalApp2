@@ -30,8 +30,8 @@
             filePath = "ReadingPal2/SessionManager.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "193"
-            endingLineNumber = "193"
+            startingLineNumber = "165"
+            endingLineNumber = "165"
             landmarkName = "fetchAndStoreSessions(for:)"
             landmarkType = "7">
          </BreakpointContent>

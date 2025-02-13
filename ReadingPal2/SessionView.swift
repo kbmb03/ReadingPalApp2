@@ -66,6 +66,5 @@ struct BookSessionView: View {
             return
         }
         sessionsManager.updateSessionSummary(bookTitle: bookTitle, sessionId: sessionID, newSummary: editedSummary)
-        session["summary"] = editedSummary
     }
 }

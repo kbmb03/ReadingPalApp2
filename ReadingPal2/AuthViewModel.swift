@@ -255,34 +255,48 @@ class AuthViewModel: ObservableObject {
         }
 
         let title = books[index]
-
-        DispatchQueue.main.async {
-            self.books.remove(at: index)  // Update the UI first
-        }
-        DeletionQueue.shared.addBookToDelete(title)
-
         let context = PersistenceController.shared.container.viewContext
-        let fetchRequest: NSFetchRequest<Book> = Book.fetchRequest()
-        fetchRequest.predicate = NSPredicate(format: "title == %@", title)
+
+        // Delete Sessions first
+        let sessionFetchRequest: NSFetchRequest<Sessions> = Sessions.fetchRequest()
+        sessionFetchRequest.predicate = NSPredicate(format: "book.title == %@", title)
 
         do {
-            let booksToDelete = try context.fetch(fetchRequest)
-            for book in booksToDelete {
-                context.delete(book)
+            let sessionsToDelete = try context.fetch(sessionFetchRequest)
+            for session in sessionsToDelete {
+                if let sessionID = session.id {
+                    DeletionQueue.shared.addSessionToDelete(sessionID)
+                }
+                context.delete(session)  // Safe delete
             }
-            try context.save()
+            print("Deleted all sessions for book: \(title)")
 
+            // Now delete the Book
+            let bookFetchRequest: NSFetchRequest<Book> = Book.fetchRequest()
+            bookFetchRequest.predicate = NSPredicate(format: "title == %@", title)
+
+            let booksToDelete = try context.fetch(bookFetchRequest)
+            for book in booksToDelete {
+                context.delete(book)  // Safe delete
+            }
             print("Book deleted from Core Data: \(title)")
 
+            try context.save()  // Save all deletions at once
+
             DispatchQueue.main.async {
-                UserDefaults.standard.set(self.books, forKey: "library")  // Keep UserDefaults updated
-                self.sessionsManager.sessions[title] = nil  // Remove associated sessions
+                self.books.remove(at: index)
+                UserDefaults.standard.set(self.books, forKey: "library")
+                self.sessionsManager.sessions[title] = nil
             }
 
+            // Add book to deletion queue for Firestore sync
+            DeletionQueue.shared.addBookToDelete(title)
+
         } catch {
-            print("Error deleting book: \(error.localizedDescription)")
+            print("Error deleting book or sessions: \(error.localizedDescription)")
         }
     }
+
 
     
     func addBook(title: String) {
@@ -450,14 +464,14 @@ class AuthViewModel: ObservableObject {
             }
 
             try await userRef.setData(["library": self.books], merge: true)
-            try await processDeletionQueue(userRef: userRef)
+            await processDeletionQueue(userRef: userRef)
 
             try context.save()
             fetchBooksFromCoreData()
-            print("✅ Sync complete: Data merged with Firestore.")
+            print("Sync complete: Data merged with Firestore.")
 
         } catch {
-            print("❌ Error syncing: \(error.localizedDescription)")
+            print("Error syncing: \(error.localizedDescription)")
         }
     }
 
