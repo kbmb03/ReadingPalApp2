@@ -30,14 +30,13 @@ class SessionsManager: ObservableObject {
         do {
             let fetchedSessions = try context.fetch(fetchRequest)
 
-            print("Total sessions retrieved from Core Data: \(fetchedSessions.count)")
-            for session in fetchedSessions {
-                print("   - Session ID: \(session.id ?? "Unknown"), Name: \(session.name ?? "Unknown")")
-            }
-
-            let sessionData = fetchedSessions.map { session in
+            let sessionData = fetchedSessions.compactMap { session -> [String: Any]? in
+                guard let sessionId = session.id else {
+                    print("Warning: Found session without an ID in Core Data. Skipping...")
+                    return nil
+                }
                 return [
-                    "id": session.id ?? UUID().uuidString,
+                    "id": sessionId,
                     "date": session.date ?? Date(),
                     "lastUpdated": session.lastUpdated ?? Date(),
                     "pagesRead": session.pagesRead,
@@ -55,6 +54,7 @@ class SessionsManager: ObservableObject {
             print("Error fetching sessions from Core Data: \(error.localizedDescription)")
         }
     }
+
 
 
     
@@ -75,10 +75,13 @@ class SessionsManager: ObservableObject {
             book.lastUpdated = Date()
             book.needsSync = true
         }
+        
+        let sessionId = sessionData["id"] as? String ?? UUID().uuidString
+        print("📌 Assigned session ID: \(sessionId)")
 
         // Create a new session every time
         let newSession = Sessions(context: context)
-        newSession.id = UUID().uuidString  // Ensure unique session ID
+        newSession.id = sessionId // Ensure unique session ID
         print("New session created with ID: \(newSession.id ?? "Unknown")")
         newSession.date = Date()
         newSession.lastUpdated = Date()

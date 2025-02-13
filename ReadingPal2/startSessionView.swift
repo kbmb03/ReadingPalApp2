@@ -143,7 +143,7 @@ struct startTimerView: View {
             "pagesRead": pagesRead,
             "summary": summary,
         ]
-        print("adding session with the name \(String(describing: session["name"]))")
+        print("adding session with the id \(String(describing: session["id"]))")
         sessionsManager.addSession(to: bookTitle, sessionData: session)
     }
 
