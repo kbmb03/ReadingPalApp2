@@ -362,27 +362,16 @@ class SessionsManager: ObservableObject {
     }
 
     
-    func updateSessionSummary(bookTitle: String, sessionId: String, newSummary: String) {
+    func updateSessionSummary(bookTitle: String, sessionId: String, newSummary: String) -> Bool {
         let context = PersistenceController.shared.container.viewContext
 
         let fetchRequest: NSFetchRequest<Sessions> = Sessions.fetchRequest()
         fetchRequest.predicate = NSPredicate(format: "SELF.id == %@", sessionId)
         
-
-        do {
-            let allSessions = try context.fetch(fetchRequest)
-            print("📌 Total sessions in Core Data: \(allSessions.count)")
-            for session in allSessions {
-                print("   - Stored session ID: \(session.id ?? "Unknown")")
-            }
-        } catch {
-            print("❌ Error fetching all sessions: \(error.localizedDescription)")
-        }
-        
         
         do {
             let fetchedSessions = try context.fetch(fetchRequest)
-                    print("🛠 Fetched sessions count: \(fetchedSessions.count)")
+                    print("Fetched sessions count: \(fetchedSessions.count)")
             if let session = try context.fetch(fetchRequest).first {
                 
                 session.summary = newSummary
@@ -400,12 +389,16 @@ class SessionsManager: ObservableObject {
                         self.sessions[bookTitle]?[index]["needsSync"] = true
                     }
                     print("Updated session \(sessionId) in sessionsManager.sessions.")
+                    return true
                 }
             } else {
                 print("Error: Session \(sessionId) not found in CoreData.")
+                return false
             }
         } catch {
             print("Error updating session summary: \(error.localizedDescription)")
+            return false
         }
+        return false
     }
 }
