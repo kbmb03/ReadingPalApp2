@@ -10,6 +10,7 @@ import Firebase
 import FirebaseAuth
 import FirebaseFirestore
 import CoreData
+import SwiftUI
 
 protocol AuthenticationFormProtocol {
     var formIsValid: Bool { get }
@@ -267,7 +268,7 @@ class AuthViewModel: ObservableObject {
                 if let sessionID = session.id {
                     DeletionQueue.shared.addSessionToDelete(sessionID)
                 }
-                context.delete(session)  // Safe delete
+                context.delete(session)
             }
             print("Deleted all sessions for book: \(title)")
 
@@ -277,25 +278,28 @@ class AuthViewModel: ObservableObject {
 
             let booksToDelete = try context.fetch(bookFetchRequest)
             for book in booksToDelete {
-                context.delete(book)  // Safe delete
+                context.delete(book)
             }
             print("Book deleted from Core Data: \(title)")
 
             try context.save()  // Save all deletions at once
 
-            DispatchQueue.main.async {
-                self.books.remove(at: index)
-                UserDefaults.standard.set(self.books, forKey: "library")
-                self.sessionsManager.sessions[title] = nil
-            }
-
             // Add book to deletion queue for Firestore sync
             DeletionQueue.shared.addBookToDelete(title)
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                withAnimation {
+                    self.books.remove(at: index)
+                    UserDefaults.standard.set(self.books, forKey: "library")
+                    self.sessionsManager.sessions[title] = nil
+                }
+            }
 
         } catch {
             print("Error deleting book or sessions: \(error.localizedDescription)")
         }
     }
+
 
 
     

@@ -25,7 +25,6 @@ struct BookSessionsView: View {
                 .onDelete(perform: { offsets in
                     deleteSession(title: bookTitle, at: offsets)
                 })
-                .onMove(perform: editMode?.wrappedValue.isEditing == true ? moveSession : nil)
             } else {
                 noSessionsView
             }
