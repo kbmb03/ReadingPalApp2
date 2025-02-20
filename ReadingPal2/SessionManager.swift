@@ -41,7 +41,7 @@ class SessionsManager: ObservableObject {
                     "id": sessionId,
                     "date": session.date ?? Date(),
                     "lastUpdated": session.lastUpdated ?? Date(),
-                    "pagesRead": session.pagesRead,
+                    "pagesRead": Int(session.pagesRead),
                     "summary": session.summary ?? "",
                     "name": session.name ?? "Session",
                     "needsSync": session.needsSync,
@@ -199,39 +199,13 @@ class SessionsManager: ObservableObject {
         return sessions.compactMap { $0["date"] as? Date }.min()
 }
     
-//    func totalPagesRead(for bookTitle: String) -> Int {
-//        guard let sessions = sessions[bookTitle] else { return 0 }
-//        print("totalPagesread session data \(sessions)")
-//        return sessions
-//            .compactMap { ($0["pagesRead"] as? Int64).map { Int($0) } } // Safely convert Int64 to Int
-//            .reduce(0, +) // Sum up all values
-//    }
-    
     func totalPagesRead(for bookTitle: String) -> Int {
-        guard let sessions = sessions[bookTitle] else {
-            print("No sessions found for \(bookTitle)")
-            return 0
-        }
-
-        var totalPages: Int64 = 0
-        for session in sessions {
-
-            if let pagesReadForBook = session["pagesRead"] as? Int64 ??
-               (session["pagesRead"] as? Int).map(Int64.init) ??  // Convert Int → Int64
-               (session["pagesRead"] as? NSNumber)?.int64Value ??
-               Int64(session["pagesRead"] as? String ?? "0") {
-
-                totalPages += pagesReadForBook
-            } else {
-                print("pagesRead not found or wrong type in \(session)")
-            }
-        }
-
-        return Int(totalPages)
+        guard let sessions = sessions[bookTitle] else { return 0 }
+        
+        return sessions
+            .compactMap { $0["pagesRead"] as? Int } // Only process Int values
+            .reduce(0, +) // Sum up all valid pagesRead values
     }
-
-
-
 
     
     func totalReadingDuration(for bookTitle: String) -> String {
