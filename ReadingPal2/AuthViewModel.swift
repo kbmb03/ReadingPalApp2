@@ -402,7 +402,7 @@ class AuthViewModel: ObservableObject {
     //Firestore Syncing:
     func syncWithFirestore() async {
         guard let userId = Auth.auth().currentUser?.uid else {
-            print("❌ No user ID found, aborting sync.")
+            print("No user ID found, aborting sync.")
             return
         }
 
@@ -425,7 +425,7 @@ class AuthViewModel: ObservableObject {
 
             // 🔹 Ensure `localBooks` is not empty by using `self.books`
             if localBooks.isEmpty {
-                print("⚠️ No books found in Core Data. Using `self.books` instead.")
+                print("No books found in Core Data. Using `self.books` instead.")
                 for bookTitle in self.books {
                     let newBook = Book(context: context)
                     newBook.title = bookTitle
@@ -450,7 +450,7 @@ class AuthViewModel: ObservableObject {
 
                 let bookRef = userRef.collection("books").document(bookTitle)
 
-                print("🔍 Calling syncSessions for book: \(bookTitle)")
+                print("Calling syncSessions for book: \(bookTitle)")
                 await sessionsManager.syncSessions(for: bookTitle)
 
                 let firestoreBook = try await bookRef.getDocument()
@@ -459,11 +459,11 @@ class AuthViewModel: ObservableObject {
 
                     if book.lastUpdated ?? Date() > firestoreTimestamp.dateValue() {
                         try await bookRef.setData(bookData, merge: true)
-                        print("✅ Updated Firestore book: \(bookTitle)")
+                        print("Updated Firestore book: \(bookTitle)")
                     }
                 } else {
                     try await bookRef.setData(bookData)
-                    print("✅ New book added to Firestore: \(bookTitle)")
+                    print("New book added to Firestore: \(bookTitle)")
                 }
             }
 

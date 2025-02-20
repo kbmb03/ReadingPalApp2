@@ -128,6 +128,7 @@ struct startTimerView: View {
                 }
             }
         }
+        
         print("potential name == \(potentialName)")
         
         let start = Int(startPage) ?? 0
@@ -143,7 +144,8 @@ struct startTimerView: View {
             "pagesRead": pagesRead,
             "summary": summary,
         ]
-        print("adding session with the id \(String(describing: session["id"]))")
+        print("adding session with the startPage \(startPage)")
+        //print("type of startPage is \(type(of: star))")
         sessionsManager.addSession(to: bookTitle, sessionData: session)
     }
 

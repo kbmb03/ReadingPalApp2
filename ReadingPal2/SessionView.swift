@@ -30,10 +30,16 @@ struct BookSessionView: View {
                let endPage = session["endPage"] as? String {
                 Text("Pages Read: \(startPage) - \(endPage)")
                     .font(.headline)
+            } else {
+                Text("Pages read: NA")
+                    .font(.headline)
             }
 
             if let duration = session["duration"] as? String {
                 Text("Time Read: \(duration)")
+                    .font(.headline)
+            } else {
+                Text("Time Read: NA")
                     .font(.headline)
             }
 

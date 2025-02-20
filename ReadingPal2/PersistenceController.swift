@@ -14,12 +14,18 @@ struct PersistenceController {
     let container: NSPersistentContainer
 
     init() {
-        container = NSPersistentContainer(name: "ReadingPalCore")
-        container.loadPersistentStores { _, error in
+        container = NSPersistentContainer(name: "ReadingPalCore") // Keep original name
+        container.loadPersistentStores { storeDescription, error in
             if let error = error as NSError? {
-                fatalError("Unresolved error \(error), \(error.userInfo)")
+                print("Unresolved error \(error), \(error.userInfo)")
             }
         }
+        
+        // Enable automatic lightweight migration
+        let storeDescription = container.persistentStoreDescriptions.first
+        storeDescription?.shouldMigrateStoreAutomatically = true
+        storeDescription?.shouldInferMappingModelAutomatically = true
     }
 }
+
 

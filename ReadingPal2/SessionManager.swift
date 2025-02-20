@@ -21,6 +21,7 @@ class SessionsManager: ObservableObject {
 
     
     func fetchSessionsFromCoreData(for bookTitle: String) {
+        //how to print debug the fetched
         print("Fetching sessions from Core Data for \(bookTitle)")
         let context = PersistenceController.shared.container.viewContext
         let fetchRequest: NSFetchRequest<Sessions> = Sessions.fetchRequest()
@@ -29,12 +30,19 @@ class SessionsManager: ObservableObject {
 
         do {
             let fetchedSessions = try context.fetch(fetchRequest)
+            
+            
+            for session in fetchedSessions {
+                print("🔄 Fetching from Core Data - Session \(session.id ?? "Unknown") - Start Page: \(String(describing: session.startPage)), End Page: \(String(describing: session.endPage))")
+            }
+
 
             let sessionData = fetchedSessions.compactMap { session -> [String: Any]? in
                 guard let sessionId = session.id else {
                     print("Warning: Found session without an ID in Core Data. Skipping...")
                     return nil
                 }
+
                 return [
                     "id": sessionId,
                     "date": session.date ?? Date(),
@@ -42,7 +50,9 @@ class SessionsManager: ObservableObject {
                     "pagesRead": session.pagesRead,
                     "summary": session.summary ?? "",
                     "name": session.name ?? "Session",
-                    "needsSync": session.needsSync
+                    "needsSync": session.needsSync,
+                    "startPage": session.startPage ?? "",
+                    "endPage": session.endPage ?? ""
                 ]
             }
 
@@ -77,19 +87,23 @@ class SessionsManager: ObservableObject {
         }
         
         let sessionId = sessionData["id"] as? String ?? UUID().uuidString
-        print("📌 Assigned session ID: \(sessionId)")
+//        print("Assigned session ID: \(sessionId)")
+//        print("IF assigning start page it would be \(String(describing: sessionData["startPage"])) and the end page would be \(String(describing: sessionData["endPage"]))")
 
         // Create a new session every time
         let newSession = Sessions(context: context)
         newSession.id = sessionId // Ensure unique session ID
-        print("New session created with ID: \(newSession.id ?? "Unknown")")
         newSession.date = Date()
+        newSession.startPage = sessionData["startPage"] as? String
+        newSession.endPage = sessionData["endPage"] as? String
         newSession.lastUpdated = Date()
         newSession.pagesRead = Int64(sessionData["pagesRead"] as? Int ?? 0)
         newSession.summary = sessionData["summary"] as? String ?? ""
         newSession.needsSync = true
         newSession.book = book  // Link session to book
         newSession.name = sessionData["name"] as? String
+        
+        print("for \(newSession.name) the start page is \( newSession.startPage) and the end page is \( newSession.endPage)")
         
         let sessionFetch : NSFetchRequest<Sessions> = Sessions.fetchRequest()
         sessionFetch.predicate = NSPredicate(format: "book.title == %@", bookTitle)
@@ -229,6 +243,7 @@ class SessionsManager: ObservableObject {
             print("No user ID found, skipping session sync.")
             return
         }
+        print("syncing sessions for \(bookTitle)")
         let bookRef = db.collection("users").document(userId).collection("books").document(bookTitle)
         let sessionsRef = bookRef.collection("sessions")
         
@@ -252,7 +267,6 @@ class SessionsManager: ObservableObject {
                 if let lastUpdated = sessionData["lastUpdated"] as? Timestamp {
                     sessionData["lastUpdated"] = lastUpdated.dateValue()
                 }
-                
                 firestoreSessions[sessionID] = sessionData
             }
 
@@ -270,11 +284,19 @@ class SessionsManager: ObservableObject {
 
                 if let localSession = localSessionMap[sessionID] {
                     if localSession.lastUpdated ?? Date() < firestoreLastUpdated {
+                        
+                        localSession.startPage = firestoreData["startPage"] as? String ?? ""
+                        localSession.endPage = firestoreData["endPage"] as? String ?? ""
+                        
+                        print("Updated local session \(sessionID) - Start Page: \(String(describing: localSession.startPage)), End Page: \(String(describing: localSession.endPage))")
+                        
+                        
                         localSession.date = firestoreData["date"] as? Date ?? Date()
                         localSession.lastUpdated = firestoreLastUpdated
                         localSession.pagesRead = Int64(firestoreData["pagesRead"] as? Int ?? 0)
                         localSession.summary = firestoreData["summary"] as? String ?? ""
                         localSession.name = firestoreData["name"] as? String ?? "Unnamed Session"
+                        print("firestoreData[startPage] type is : \(type(of: firestoreData["startPage"]))")
                         localSession.needsSync = false
                         print("Updated local session \(sessionID) from Firestore")
                     }
@@ -286,6 +308,9 @@ class SessionsManager: ObservableObject {
                     newSession.pagesRead = Int64(firestoreData["pagesRead"] as? Int ?? 0)
                     newSession.summary = firestoreData["summary"] as? String ?? ""
                     newSession.name = firestoreData["name"] as? String ?? "Unnamed Session"
+                    newSession.startPage = firestoreData["startPage"] as? String ?? ""
+                    print("🆕 Created new session \(sessionID) - Start Page: \(String(describing: newSession.startPage)), End Page: \(String(describing: newSession.endPage))")
+                    newSession.endPage = firestoreData["endPage"] as? String ?? ""
                     newSession.needsSync = false
 
                     let bookFetchRequest: NSFetchRequest<Book> = Book.fetchRequest()
@@ -299,22 +324,38 @@ class SessionsManager: ObservableObject {
             }
 
             for (sessionID, localSession) in localSessionMap {
-                if firestoreSessions[sessionID] == nil {
+                let localLastUpdated = localSession.lastUpdated ?? Date()
+                let firestoreLastUpdated = firestoreSessions[sessionID]?["lastUpdated"] as? Date ?? Date()
+
+                if firestoreSessions[sessionID] == nil || localLastUpdated > firestoreLastUpdated {
                     let sessionData: [String: Any] = [
                         "id": localSession.id ?? UUID().uuidString,
                         "name": localSession.name ?? "Unnamed Session",
                         "date": localSession.date ?? Date(),
-                        "lastUpdated": localSession.lastUpdated ?? Date(),
+                        "lastUpdated": localLastUpdated,
                         "pagesRead": localSession.pagesRead,
-                        "summary": localSession.summary ?? ""
+                        "summary": localSession.summary ?? "",
+                        "startPage": localSession.startPage ?? "",
+                        "endPage": localSession.endPage ?? ""
                     ]
-                    try await sessionsRef.document(sessionID).setData(sessionData)
-                    print("Uploaded local session \(sessionID) to Firestore")
+                    try await sessionsRef.document(sessionID).setData(sessionData, merge: true)
+                    print("Updated Firestore session \(sessionID)")
                 }
             }
 
+
             try context.save()
+            
             print("Sync complete for book \(bookTitle): Core Data and Firestore merged")
+
+            let verifyFetchRequest: NSFetchRequest<Sessions> = Sessions.fetchRequest()
+            verifyFetchRequest.predicate = NSPredicate(format: "book.title == %@", bookTitle)
+            let savedSessions = try context.fetch(verifyFetchRequest)
+
+            for session in savedSessions {
+                print("🗄 Core Data - Session \(session.id ?? "Unknown ID") - Start Page: \(String(describing: session.startPage)), End Page: \(String(describing: session.endPage))")
+            }
+
 
             DispatchQueue.main.async {
                 self.fetchSessionsFromCoreData(for: bookTitle)  // Refresh UI after sync
@@ -377,6 +418,11 @@ class SessionsManager: ObservableObject {
                 session.summary = newSummary
                 session.lastUpdated = Date()
                 session.needsSync = true
+                
+                if let book = session.book {
+                    book.lastUpdated = Date()
+                    print("Updated lastUpdated for book: \(book.title ?? "Unknown Book")")
+                }
                 
                 try context.save()
                 print("Session \(sessionId) updated in CoreData with new summary.")
