@@ -46,7 +46,8 @@ class SessionsManager: ObservableObject {
                     "name": session.name ?? "Session",
                     "needsSync": session.needsSync,
                     "startPage": session.startPage ?? "",
-                    "endPage": session.endPage ?? ""
+                    "endPage": session.endPage ?? "",
+                    "duration": session.duration ?? ""
                 ]
             }
 
@@ -88,6 +89,7 @@ class SessionsManager: ObservableObject {
         let newSession = Sessions(context: context)
         newSession.id = sessionId // Ensure unique session ID
         newSession.date = Date()
+        newSession.duration = sessionData["duration"] as? String ?? ""
         newSession.startPage = sessionData["startPage"] as? String ?? ""
         newSession.endPage = sessionData["endPage"] as? String ?? ""
         newSession.lastUpdated = Date()
@@ -166,6 +168,7 @@ class SessionsManager: ObservableObject {
                 session.pagesRead = Int64(data["pagesRead"] as? Int ?? 0)
                 session.summary = data["summary"] as? String ?? ""
                 session.startPage = data["startPage"] as? String ?? ""
+                session.duration = data["duration"] as? String ?? ""
                 session.endPage = data["endPage"] as? String ?? ""
                 session.name = data["name"] as? String ?? "Unnamed Session"
                 session.needsSync = false
@@ -281,6 +284,7 @@ class SessionsManager: ObservableObject {
                         
                         localSession.startPage = firestoreData["startPage"] as? String ?? ""
                         localSession.endPage = firestoreData["endPage"] as? String ?? ""
+                        localSession.duration = firestoreData["duration"] as? String ?? ""
                         
                         print("Updated local session \(sessionID)")
                         
@@ -302,6 +306,7 @@ class SessionsManager: ObservableObject {
                     newSession.summary = firestoreData["summary"] as? String ?? ""
                     newSession.name = firestoreData["name"] as? String ?? "Unnamed Session"
                     newSession.startPage = firestoreData["startPage"] as? String ?? ""
+                    newSession.duration = firestoreData["duration"] as? String ?? ""
                     newSession.endPage = firestoreData["endPage"] as? String ?? ""
                     newSession.needsSync = false
 
@@ -328,6 +333,7 @@ class SessionsManager: ObservableObject {
                         "pagesRead": localSession.pagesRead,
                         "summary": localSession.summary ?? "",
                         "startPage": localSession.startPage ?? "",
+                        "duration": localSession.duration ?? "",
                         "endPage": localSession.endPage ?? ""
                     ]
                     try await sessionsRef.document(sessionID).setData(sessionData, merge: true)

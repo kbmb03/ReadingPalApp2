@@ -9,6 +9,7 @@
     </entity>
     <entity name="Sessions" representedClassName="Sessions" syncable="YES" codeGenerationType="class">
         <attribute name="date" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="duration" optional="YES" attributeType="String"/>
         <attribute name="endPage" optional="YES" attributeType="String"/>
         <attribute name="id" attributeType="String"/>
         <attribute name="lastUpdated" attributeType="Date" usesScalarValueType="NO"/>

@@ -39,7 +39,7 @@ struct BookSessionView: View {
                 Text("Time Read: \(duration)")
                     .font(.headline)
             } else {
-                Text("Time Read: NA")
+                Text("Time Read: N/A")
                     .font(.headline)
             }
 
