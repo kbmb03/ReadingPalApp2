@@ -34,6 +34,10 @@ struct BookSessionView: View {
                 Text("Pages Read: N/A")
                     .font(.headline)
             }
+            if let pagesRead = session["pagesRead"] {
+                Text("total pages read: \(pagesRead)")
+                    .font(.headline)
+            }
 
             if let duration = session["duration"] as? String {
                 Text("Time Read: \(duration)")
@@ -42,6 +46,7 @@ struct BookSessionView: View {
                 Text("Time Read: N/A")
                     .font(.headline)
             }
+            
 
             Text("Summary:")
                 .font(.headline)

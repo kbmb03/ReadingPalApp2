@@ -189,13 +189,6 @@ class SessionsManager: ObservableObject {
         }
     }
 
-
-
-    // Update sessions for a book
-    func updateSessions(for bookTitle: String) {
-        
-    }
-
     
     // Functions to assist with book details page///
     func earliestSessionDate(for bookTitle : String) -> Date? {
@@ -204,12 +197,16 @@ class SessionsManager: ObservableObject {
         }
         return sessions.compactMap { $0["date"] as? Date }.min()
 }
-    func totalPagesRead(for bookTitle : String) -> Int {
-        guard let sessions = sessions[bookTitle] else {
-            return 0
-        }
-        return sessions.compactMap { $0["pagesRead"] as? Int }.reduce(0, +)
+    
+    func totalPagesRead(for bookTitle: String) -> Int {
+        guard let sessions = sessions[bookTitle] else { return 0 }
+
+        return sessions
+            .compactMap { ($0["pagesRead"] as? Int64).map { Int($0) } } // Safely convert Int64 to Int
+            .reduce(0, +) // Sum up all values
     }
+
+
     
     func totalReadingDuration(for bookTitle: String) -> String {
         guard let sessions = sessions[bookTitle] else { return "0 hours, 0 minutes" }
