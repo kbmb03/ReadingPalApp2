@@ -31,7 +31,7 @@ struct BookSessionView: View {
                 Text("Pages Read: \(startPage) - \(endPage)")
                     .font(.headline)
             } else {
-                Text("Pages read: NA")
+                Text("Pages Read: N/A")
                     .font(.headline)
             }
 
