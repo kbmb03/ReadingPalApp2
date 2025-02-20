@@ -144,8 +144,6 @@ struct startTimerView: View {
             "pagesRead": pagesRead,
             "summary": summary,
         ]
-        print("adding session with the startPage \(startPage)")
-        //print("type of startPage is \(type(of: star))")
         sessionsManager.addSession(to: bookTitle, sessionData: session)
     }
 

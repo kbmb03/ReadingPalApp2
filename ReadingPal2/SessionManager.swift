@@ -110,8 +110,9 @@ class SessionsManager: ObservableObject {
                 if self.sessions[bookTitle] == nil {
                     self.sessions[bookTitle] = []
                 }
+                print("totalPagesRead debugging: Updated sessions[bookTitle]: \(self.sessions[bookTitle] ?? [])")
+
                 self.sessions[bookTitle]?.insert(sessionData, at: 0)
-                print("Updated sessionsManager.sessions for \(bookTitle), added at the top.")
             }
         } catch {
             print("Error saving session: \(error.localizedDescription)")
@@ -198,13 +199,38 @@ class SessionsManager: ObservableObject {
         return sessions.compactMap { $0["date"] as? Date }.min()
 }
     
+//    func totalPagesRead(for bookTitle: String) -> Int {
+//        guard let sessions = sessions[bookTitle] else { return 0 }
+//        print("totalPagesread session data \(sessions)")
+//        return sessions
+//            .compactMap { ($0["pagesRead"] as? Int64).map { Int($0) } } // Safely convert Int64 to Int
+//            .reduce(0, +) // Sum up all values
+//    }
+    
     func totalPagesRead(for bookTitle: String) -> Int {
-        guard let sessions = sessions[bookTitle] else { return 0 }
+        guard let sessions = sessions[bookTitle] else {
+            print("No sessions found for \(bookTitle)")
+            return 0
+        }
 
-        return sessions
-            .compactMap { ($0["pagesRead"] as? Int64).map { Int($0) } } // Safely convert Int64 to Int
-            .reduce(0, +) // Sum up all values
+        var totalPages: Int64 = 0
+        for session in sessions {
+
+            if let pagesReadForBook = session["pagesRead"] as? Int64 ??
+               (session["pagesRead"] as? Int).map(Int64.init) ??  // Convert Int → Int64
+               (session["pagesRead"] as? NSNumber)?.int64Value ??
+               Int64(session["pagesRead"] as? String ?? "0") {
+
+                totalPages += pagesReadForBook
+            } else {
+                print("pagesRead not found or wrong type in \(session)")
+            }
+        }
+
+        return Int(totalPages)
     }
+
+
 
 
     
