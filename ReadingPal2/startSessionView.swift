@@ -18,6 +18,7 @@ struct startTimerView: View {
     @State private var sessionName = ""
     @State private var showCancelConfirmation = false
     @State private var showErrorInNamingSession = false
+    @State private var showInvalidPageInputAlert = false // New alert for page input validation
     @Environment(\.dismiss) var dismiss
 
     var body: some View {
@@ -76,6 +77,11 @@ struct startTimerView: View {
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Save") {
+                        if !isValidPageInput() {
+                            showInvalidPageInputAlert = true
+                            return
+                        }
+
                         let validName = validSessionName(title: sessionName)
                         if validName {
                             saveSession()
@@ -83,15 +89,18 @@ struct startTimerView: View {
                         } else {
                             showErrorInNamingSession = true
                         }
-
                     }
                 }
             }
             .alert("Invalid Name", isPresented: $showErrorInNamingSession) {
-                Button("OK", role: .cancel) {
-                }
+                Button("OK", role: .cancel) {}
             } message: {
                 Text("You already have a session named \(sessionName)")
+            }
+            .alert("Invalid Page Numbers", isPresented: $showInvalidPageInputAlert) { // New alert
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("Start and End Page must contain only numbers.")
             }
             .confirmationDialog("You Have Unsaved Changes", isPresented: $showCancelConfirmation, titleVisibility: .visible) {
                 Button("Discard Changes", role: .destructive) {
@@ -104,33 +113,33 @@ struct startTimerView: View {
     }
 
     private func hasUnsavedChanges() -> Bool {
-        print()
         return !sessionName.isEmpty || !startPage.isEmpty || !endPage.isEmpty || !summary.isEmpty || timeElapsed > 0
     }
 
+    private func isValidPageInput() -> Bool {
+        let numberRegex = "^[0-9]*$"
+        let startPageValid = startPage.isEmpty || startPage.range(of: numberRegex, options: .regularExpression) != nil
+        let endPageValid = endPage.isEmpty || endPage.range(of: numberRegex, options: .regularExpression) != nil
+        return startPageValid && endPageValid
+    }
+
     private func saveSession() {
-        
-        var potentialName : String = sessionName
+        var potentialName: String = sessionName
         let existingSessionNames = Set(sessionsManager.sessions[bookTitle]?.compactMap { $0["name"] as? String } ?? [])
 
-        if !potentialName.isEmpty {
-            print("naming session \(sessionName)")
-        } else {
+        if potentialName.isEmpty {
             potentialName = "Session \((sessionsManager.sessions[bookTitle]?.count ?? 0) + 1)"
             if existingSessionNames.contains(potentialName) {
                 var validName = false
                 var increment = 1
                 while !validName {
-                    print("trying name \(potentialName)")
                     potentialName = "Session \((sessionsManager.sessions[bookTitle]?.count ?? 0) + 1 + increment)"
                     validName = !existingSessionNames.contains(potentialName)
                     increment += 1
                 }
             }
         }
-        
-        print("potential name == \(potentialName)")
-        
+
         let start = Int(startPage) ?? 0
         let end = Int(endPage) ?? 0
         let pagesRead = max(end - start, 0)
@@ -152,10 +161,10 @@ struct startTimerView: View {
         let seconds = Int(time) % 60
         return String(format: "%02d:%02d", minutes, seconds)
     }
-    
-    
+
     private func validSessionName(title: String) -> Bool {
         let existingSessionNames = Set(sessionsManager.sessions[bookTitle]?.compactMap { $0["name"] as? String } ?? [])
         return !existingSessionNames.contains(title)
     }
 }
+
