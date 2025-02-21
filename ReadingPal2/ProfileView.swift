@@ -71,12 +71,14 @@ struct ProfileView: View {
                             SettingsRowView(imageName: "arrow.triangle.2.circlepath", title: "Sync Data", tintColor: .gray)
                         }
                     }
+                    .tint(.primary)
                     Button {
                         //viewModel.signOut()
                         showSignOutConfirmation = true
                     } label: {
                         SettingsRowView(imageName: "arrow.left.circle.fill", title: "Sign Out", tintColor: .red)
                     }
+                    .tint(.primary)
                     .alert("Sign Out", isPresented: $showSignOutConfirmation) {
                         Button("Confirm", role: .destructive) {
                             viewModel.signOut()
@@ -94,6 +96,7 @@ struct ProfileView: View {
                         } label: {
                             SettingsRowView(imageName: "xmark.circle.fill", title: "Delete Account", tintColor: .red)
                         }
+                        .tint(.primary)
                     .alert("Delete Account", isPresented: $showDeletionConfirmation) {
                             SecureField("Enter your password", text: $password)
                             
