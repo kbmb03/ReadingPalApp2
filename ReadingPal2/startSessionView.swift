@@ -48,7 +48,7 @@ struct startTimerView: View {
                                 .font(.headline)
                             ScrollView {
                                 TextEditor(text: $summary)
-                                    .frame(minHeight: 200, maxHeight: 300)
+                                    .frame(minHeight: 300, maxHeight: 350)
                                     .background(Color(.secondarySystemBackground))
                                     .cornerRadius(8)
                                     .overlay(
@@ -62,6 +62,9 @@ struct startTimerView: View {
                     }
                 }
                 Spacer()
+            }
+            .onTapGesture {
+                hideKeyboard()
             }
             .navigationTitle(bookTitle)
             .navigationBarTitleDisplayMode(.inline)

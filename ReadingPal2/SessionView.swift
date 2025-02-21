@@ -76,6 +76,9 @@ struct BookSessionView: View {
                 )
             }
         }
+        .onTapGesture {
+            hideKeyboard()
+        }
         .padding()
         .onAppear {
             editedSummary = session["summary"] as? String ?? ""
