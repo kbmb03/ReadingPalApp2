@@ -19,7 +19,6 @@ class NetworkMonitor: ObservableObject {
     private init() {
         monitor.pathUpdateHandler = { path in
             DispatchQueue.main.async {
-                let wasDisconnected = !self.isConnected
                 self.isConnected = (path.status == .satisfied)
 
             }

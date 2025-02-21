@@ -371,7 +371,6 @@ class SessionsManager: ObservableObject {
         
         
         do {
-            let fetchedSessions = try context.fetch(fetchRequest)
             if let session = try context.fetch(fetchRequest).first {
                 
                 session.summary = newSummary

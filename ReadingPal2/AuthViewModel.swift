@@ -322,8 +322,6 @@ class AuthViewModel: ObservableObject {
         do {
             let fetchedBooks = try context.fetch(fetchRequest)
             let bookTitles = fetchedBooks.compactMap { $0.title }
-            for title in bookTitles {
-            }
             if !bookTitles.isEmpty && self.books == [] {
                 DispatchQueue.main.async {
                     self.books = bookTitles
@@ -489,8 +487,4 @@ class AuthViewModel: ObservableObject {
             }
         }
     }
-
-
-
-    
 }

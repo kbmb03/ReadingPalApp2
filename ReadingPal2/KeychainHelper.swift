@@ -52,5 +52,8 @@ class KeychainHelper {
         ] as [CFString : Any]
         
         let status = SecItemDelete(query as CFDictionary)
+        if status != errSecSuccess {
+            Logger.log("Keychain delete error for \(key): \(status)")
+        }
     }
 }
