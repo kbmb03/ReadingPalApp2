@@ -70,6 +70,7 @@ struct BookListView: View {
                 Text("A book with the same name already exists.")
             })
         }
+        .navigationViewStyle(.stack)
     }
     
     private func deleteBook(at offsets: IndexSet) {
