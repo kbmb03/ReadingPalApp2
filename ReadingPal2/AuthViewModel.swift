@@ -33,7 +33,6 @@ class AuthViewModel: ObservableObject {
         self.books = []
 
         guard self.userSession != nil else {
-            print("No user is signed in. Skipping fetchUser() on init.")
             self.loadingComplete = true
             return
         }
@@ -44,7 +43,6 @@ class AuthViewModel: ObservableObject {
     
     
     func signIn(withEmail email: String, password: String) async throws {
-        print("signIn called")
         do {
             let result = try await Auth.auth().signIn(withEmail: email, password: password)
             self.userSession = result.user
@@ -53,8 +51,6 @@ class AuthViewModel: ObservableObject {
                     let snapshot = try await userRef.getDocument()
                     
                     if !snapshot.exists {
-                        print("No user data found in Firestore. Blocking sign-in.")
-                        
                         try Auth.auth().signOut()
                         self.userSession = nil
                         DispatchQueue.main.async {
@@ -77,9 +73,8 @@ class AuthViewModel: ObservableObject {
             try Auth.auth().signOut()
             self.userSession = nil
             self.currentUser = nil
-            print("Successfully signed out.")
         } catch {
-            print("Sign-out error: \(error.localizedDescription)")
+            Logger.log("Sign-out error: \(error.localizedDescription)")
         }
     }
     
@@ -106,9 +101,8 @@ class AuthViewModel: ObservableObject {
             try context.save()
             self.books = []
         } catch {
-            print("error in deleting books")
+            Logger.log("error in deleting books: \(error.localizedDescription)")
         }
-        print("CoreData deleted")
     }
 
     
@@ -149,7 +143,6 @@ class AuthViewModel: ObservableObject {
 
     func deleteAccount(password: String) async -> Bool {
         guard let user = Auth.auth().currentUser, let email = user.email else {
-            print("No authenticated user found.")
             return false
         }
 
@@ -157,26 +150,21 @@ class AuthViewModel: ObservableObject {
 
         do {
             try await user.reauthenticate(with: credential)
-            print("Re-authentication successful. Proceeding with deletion.")
 
             try await user.delete()
-            print("Account successfully deleted.")
 
             self.userSession = nil
             self.currentUser = nil
 
             return true
         } catch {
-            print("Failed to delete account: \(error.localizedDescription)")
             return false
         }
     }
 
     
     func fetchUser() async {
-        print("FETCH USER CALLED!!!!!")
         guard let uid = Auth.auth().currentUser?.uid else {
-            print("No user signed in. ProfileView will not show.")
             self.loadingComplete = true
             return
         }
@@ -186,7 +174,6 @@ class AuthViewModel: ObservableObject {
         if let fullName = KeychainHelper.get("fullName"),
            let email = KeychainHelper.get("email") {
             self.currentUser = User(id: uid, fullName: fullName, email: email)
-            print("Loaded user info for \(fullName) from keychain")
             
             self.books = UserDefaults.standard.stringArray(forKey: "library") ?? []
             for book in self.books {
@@ -195,7 +182,6 @@ class AuthViewModel: ObservableObject {
             self.loadingComplete = true
             return
         } else {
-            print("fetching user down here")
             let userRef = Firestore.firestore().collection("users").document(uid)
             
             do {
@@ -208,11 +194,9 @@ class AuthViewModel: ObservableObject {
                     
                     KeychainHelper.set(fullName, forKey: "fullName")
                     KeychainHelper.set(email, forKey: "email")
-                    print("Saved user data to Keychain.")
                     
                     if let library = userData["library"] as? [String] {
                         for book in library.reversed() {
-                            print("looping though \(book)")
                             self.addBook(title: book)
                             await sessionsManager.fetchAndStoreSessions(for: book)
                         }
@@ -223,10 +207,9 @@ class AuthViewModel: ObservableObject {
                     }
                 } else {
                     self.books = []
-                    print("No user data found in firestore")
                 }
             } catch {
-                print("Error fetching user data: \(error.localizedDescription)")
+                Logger.log("Error fetching user data: \(error.localizedDescription)")
             }
         }
         self.loadingComplete = true
@@ -251,7 +234,6 @@ class AuthViewModel: ObservableObject {
     
     func removeBook(at index: Int) {
         guard index < books.count else {
-            print("Error: Index out of range")
             return
         }
 
@@ -270,7 +252,6 @@ class AuthViewModel: ObservableObject {
                 }
                 context.delete(session)
             }
-            print("Deleted all sessions for book: \(title)")
 
             // Now delete the Book
             let bookFetchRequest: NSFetchRequest<Book> = Book.fetchRequest()
@@ -280,7 +261,6 @@ class AuthViewModel: ObservableObject {
             for book in booksToDelete {
                 context.delete(book)
             }
-            print("Book deleted from Core Data: \(title)")
 
             try context.save()  // Save all deletions at once
 
@@ -296,7 +276,7 @@ class AuthViewModel: ObservableObject {
             }
 
         } catch {
-            print("Error deleting book or sessions: \(error.localizedDescription)")
+            Logger.log("Error deleting book or sessions: \(error.localizedDescription)")
         }
     }
 
@@ -305,11 +285,9 @@ class AuthViewModel: ObservableObject {
     
     func addBook(title: String) {
         guard !title.isEmpty && !self.books.contains(title) else {
-            print("Not adding empty/existing book title")
             return
         }
 
-        print("Adding book to CoreData: \(title)")
         let context = PersistenceController.shared.container.viewContext
 
         let fetchRequest: NSFetchRequest<Book> = Book.fetchRequest()
@@ -324,15 +302,13 @@ class AuthViewModel: ObservableObject {
         newBook.needsSync = true
         do {
             try context.save()
-            print("Book successfully saved in CoreData: \(title)")
             DispatchQueue.main.async {
                 self.books.insert(title, at: 0)
                 UserDefaults.standard.set(self.books, forKey: "library")
-                print("Updated books list in addBook: \(self.books)")
                 self.sessionsManager.sessions[title] = []
             }
         } catch {
-            print("error saving book: \(error.localizedDescription)")
+            Logger.log("error saving book: \(error.localizedDescription)")
         }
     }
 
@@ -347,16 +323,14 @@ class AuthViewModel: ObservableObject {
             let fetchedBooks = try context.fetch(fetchRequest)
             let bookTitles = fetchedBooks.compactMap { $0.title }
             for title in bookTitles {
-                print("titles in loop are: \(title)")
             }
             if !bookTitles.isEmpty && self.books == [] {
                 DispatchQueue.main.async {
                     self.books = bookTitles
-                    print("updated books list in fetchBookFromCoreData: \(self.books)")
                 }
             }
         } catch {
-            print("Error fetching books: \(error.localizedDescription)")
+            Logger.log("error fetching book: \(error.localizedDescription)")
         }
     }
     
@@ -402,18 +376,12 @@ class AuthViewModel: ObservableObject {
     //Firestore Syncing:
     func syncWithFirestore() async {
         guard let userId = Auth.auth().currentUser?.uid else {
-            print("No user ID found, aborting sync.")
             return
         }
-
-        let booksToDelete = DeletionQueue.shared.getBooksToDelete()
         
         if !NetworkMonitor.shared.isConnected {
-            print("No internet connection. Sync postponed.")
             return
         }
-
-        print("🔄 Syncing data with Firestore...")
 
         let userRef = Firestore.firestore().collection("users").document(userId)
         let context = PersistenceController.shared.container.viewContext
@@ -423,9 +391,8 @@ class AuthViewModel: ObservableObject {
             // Fetch books from Core Data
             var localBooks = try context.fetch(fetchRequest)
 
-            // 🔹 Ensure `localBooks` is not empty by using `self.books`
+            // Ensure `localBooks` is not empty by using `self.books`
             if localBooks.isEmpty {
-                print("No books found in Core Data. Using `self.books` instead.")
                 for bookTitle in self.books {
                     let newBook = Book(context: context)
                     newBook.title = bookTitle
@@ -434,7 +401,6 @@ class AuthViewModel: ObservableObject {
                     localBooks.append(newBook)
                 }
                 try context.save()
-                print("✅ Created missing books in Core Data from `self.books`.")
             }
 
             var latestBooks: [[String: Any]] = []
@@ -450,7 +416,6 @@ class AuthViewModel: ObservableObject {
 
                 let bookRef = userRef.collection("books").document(bookTitle)
 
-                print("Calling syncSessions for book: \(bookTitle)")
                 await sessionsManager.syncSessions(for: bookTitle)
 
                 let firestoreBook = try await bookRef.getDocument()
@@ -459,11 +424,9 @@ class AuthViewModel: ObservableObject {
 
                     if book.lastUpdated ?? Date() > firestoreTimestamp.dateValue() {
                         try await bookRef.setData(bookData, merge: true)
-                        print("Updated Firestore book: \(bookTitle)")
                     }
                 } else {
                     try await bookRef.setData(bookData)
-                    print("New book added to Firestore: \(bookTitle)")
                 }
             }
 
@@ -472,10 +435,9 @@ class AuthViewModel: ObservableObject {
 
             try context.save()
             fetchBooksFromCoreData()
-            print("Sync complete: Data merged with Firestore.")
 
         } catch {
-            print("Error syncing: \(error.localizedDescription)")
+            Logger.log("error syncing: \(error.localizedDescription)")
         }
     }
 
@@ -491,9 +453,8 @@ class AuthViewModel: ObservableObject {
             
             do {
                 try await bookRef.delete()
-                print("Deleted book from Firestore: \(bookTitle)")
             } catch {
-                print("Error deleting book from Firestore: \(error.localizedDescription)")
+                Logger.log("Error deleting book from Firestore: \(error.localizedDescription)")
             }
         }
 
@@ -506,9 +467,8 @@ class AuthViewModel: ObservableObject {
 
                 do {
                     try await sessionRef.delete()
-                    print("Deleted session from Firestore: \(sessionId)")
                 } catch {
-                    print("Error deleting session from Firestore: \(error.localizedDescription)")
+                    Logger.log("error deleting session from Firestore: \(error.localizedDescription)")
                 }
             }
         }
@@ -522,10 +482,9 @@ class AuthViewModel: ObservableObject {
         Timer.scheduledTimer(withTimeInterval: 604800, repeats: true) { _ in
             Task {
                 if NetworkMonitor.shared.isConnected {
-                    print("Auto-syncing after 7 days...")
                     await self.syncWithFirestore()
                 } else {
-                    print("Skipping auto-sync: No internet connection.")
+                    Logger.log("Skipping auto-sync: No internet connection.")
                 }
             }
         }

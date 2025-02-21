@@ -17,7 +17,7 @@ struct PersistenceController {
         container = NSPersistentContainer(name: "ReadingPalCore") // Keep original name
         container.loadPersistentStores { storeDescription, error in
             if let error = error as NSError? {
-                print("Unresolved error \(error), \(error.userInfo)")
+                Logger.log("Unresolved error: \(error.localizedDescription)")
             }
         }
         

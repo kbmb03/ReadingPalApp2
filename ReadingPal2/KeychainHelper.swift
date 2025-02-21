@@ -24,7 +24,6 @@ class KeychainHelper {
         let status = SecItemAdd(query as CFDictionary, nil)
         
         if status != errSecSuccess {
-            print("Keychain save error for \(key): \(status)")
         }
     }
 
@@ -53,8 +52,5 @@ class KeychainHelper {
         ] as [CFString : Any]
         
         let status = SecItemDelete(query as CFDictionary)
-        if status != errSecSuccess {
-            print("Keychain delete error for \(key): \(status)")
-        }
     }
 }

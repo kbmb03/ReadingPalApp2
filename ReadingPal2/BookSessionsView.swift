@@ -41,7 +41,6 @@ struct BookSessionsView: View {
         .onAppear {
             if sessionsManager.sessions[bookTitle] == nil || sessionsManager.sessions[bookTitle]?.isEmpty == true {
                 sessionsManager.fetchSessionsFromCoreData(for: bookTitle)
-                //print("Fetching sessions from Core Data for \(bookTitle) on view appear.")
             }
         }
 

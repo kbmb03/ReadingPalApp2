@@ -21,8 +21,6 @@ class SessionsManager: ObservableObject {
 
     
     func fetchSessionsFromCoreData(for bookTitle: String) {
-        //how to print debug the fetched
-        //print("Fetching sessions from Core Data for \(bookTitle)")
         let context = PersistenceController.shared.container.viewContext
         let fetchRequest: NSFetchRequest<Sessions> = Sessions.fetchRequest()
         fetchRequest.predicate = NSPredicate(format: "book.title == %@", bookTitle)
@@ -33,7 +31,6 @@ class SessionsManager: ObservableObject {
 
             let sessionData = fetchedSessions.compactMap { session -> [String: Any]? in
                 guard let sessionId = session.id else {
-                    print("Warning: Found session without an ID in Core Data. Skipping...")
                     return nil
                 }
 
@@ -53,10 +50,9 @@ class SessionsManager: ObservableObject {
 
             DispatchQueue.main.async {
                 self.sessions[bookTitle] = sessionData
-                //print("Sessions updated from Core Data for \(bookTitle): \(sessionData.count) sessions")
             }
         } catch {
-            print("Error fetching sessions from Core Data: \(error.localizedDescription)")
+            Logger.log("Error fetching sessions from Core Data: \(error.localizedDescription)")
         }
     }
 
@@ -82,8 +78,6 @@ class SessionsManager: ObservableObject {
         }
         
         let sessionId = sessionData["id"] as? String ?? UUID().uuidString
-//        print("Assigned session ID: \(sessionId)")
-//        print("IF assigning start page it would be \(String(describing: sessionData["startPage"])) and the end page would be \(String(describing: sessionData["endPage"]))")
 
         // Create a new session every time
         let newSession = Sessions(context: context)
@@ -104,18 +98,16 @@ class SessionsManager: ObservableObject {
 
         do {
             try context.save()
-            print("Session successfully saved to CoreData for \(bookTitle)")
 
             DispatchQueue.main.async {
                 if self.sessions[bookTitle] == nil {
                     self.sessions[bookTitle] = []
                 }
-                print("totalPagesRead debugging: Updated sessions[bookTitle]: \(self.sessions[bookTitle] ?? [])")
 
                 self.sessions[bookTitle]?.insert(sessionData, at: 0)
             }
         } catch {
-            print("Error saving session: \(error.localizedDescription)")
+            Logger.log("Error saving session: \(error.localizedDescription)")
         }
     }
 
@@ -174,19 +166,16 @@ class SessionsManager: ObservableObject {
                 session.name = data["name"] as? String ?? "Unnamed Session"
                 session.needsSync = false
 
-                print("Saving session to Core Data: \(session.name ?? "Unknown")")
             }
 
             try context.save()
             self.sessions[bookTitle] = fetchedSessions
-            //print("All sessions saved to Core Data for \(bookTitle)")
 
             DispatchQueue.main.async {
                 self.sessions[bookTitle] = fetchedSessions
-                //print("Updated `sessionsManager.sessions` for \(bookTitle)")
             }
         } catch {
-            print("Error fetching or storing sessions: \(error.localizedDescription)")
+            Logger.log("Error fetching or storing sessions: \(error.localizedDescription)")
         }
     }
 
@@ -234,10 +223,8 @@ class SessionsManager: ObservableObject {
     
     func syncSessions(for bookTitle: String) async {
         guard let userId = Auth.auth().currentUser?.uid else {
-            print("No user ID found, skipping session sync.")
             return
         }
-        print("syncing sessions for \(bookTitle)")
         let bookRef = db.collection("users").document(userId).collection("books").document(bookTitle)
         let sessionsRef = bookRef.collection("sessions")
         
@@ -283,16 +270,12 @@ class SessionsManager: ObservableObject {
                         localSession.endPage = firestoreData["endPage"] as? String ?? ""
                         localSession.duration = firestoreData["duration"] as? String ?? ""
                         
-                        print("Updated local session \(sessionID)")
-                        
-                        
                         localSession.date = firestoreData["date"] as? Date ?? Date()
                         localSession.lastUpdated = firestoreLastUpdated
                         localSession.pagesRead = Int64(firestoreData["pagesRead"] as? Int ?? 0)
                         localSession.summary = firestoreData["summary"] as? String ?? ""
                         localSession.name = firestoreData["name"] as? String ?? "Unnamed Session"
                         localSession.needsSync = false
-                        print("Updated local session \(sessionID) from Firestore")
                     }
                 } else {
                     let newSession = Sessions(context: context)
@@ -313,7 +296,6 @@ class SessionsManager: ObservableObject {
                         newSession.book = book
                     }
 
-                    print("Added session \(sessionID) from Firestore to Core Data")
                 }
             }
 
@@ -334,38 +316,28 @@ class SessionsManager: ObservableObject {
                         "endPage": localSession.endPage ?? ""
                     ]
                     try await sessionsRef.document(sessionID).setData(sessionData, merge: true)
-                    print("Updated Firestore session \(sessionID)")
                 }
             }
 
 
             try context.save()
             
-            print("Sync complete for book \(bookTitle): Core Data and Firestore merged")
-
-            let verifyFetchRequest: NSFetchRequest<Sessions> = Sessions.fetchRequest()
-            verifyFetchRequest.predicate = NSPredicate(format: "book.title == %@", bookTitle)
-            let savedSessions = try context.fetch(verifyFetchRequest)
-
-
             DispatchQueue.main.async {
                 self.fetchSessionsFromCoreData(for: bookTitle)  // Refresh UI after sync
             }
 
         } catch {
-            print("Error syncing sessions: \(error.localizedDescription)")
+            Logger.log("Error syncing sesions: \(error.localizedDescription)")
         }
     }
     
     func removeSession(title: String, at index: Int) {
         guard var bookSessions = self.sessions[title], index < bookSessions.count else {
-            print("unable to get bookSessions or index out of range, returning")
             return
         }
 
         let sessionToDelete = bookSessions[index]
         guard let sessionToDeleteID = sessionToDelete["id"] as? String, !sessionToDeleteID.isEmpty else {
-            print("Session ID is missing or empty, aborting delete.")
             return
         }
 
@@ -380,16 +352,13 @@ class SessionsManager: ObservableObject {
             if let session = try context.fetch(fetchRequest).first {
                 context.delete(session)
                 try context.save()
-                print("Session \(sessionToDeleteID) removed from CoreData")
             }
         } catch {
-            print("Error deleting session \(sessionToDeleteID): \(error.localizedDescription)")
             return
         }
         DispatchQueue.main.async {
             bookSessions.remove(at: index)
             self.sessions[title] = bookSessions
-            print("Session removed from sessionManager for \(title)")
         }
     }
 
@@ -403,7 +372,6 @@ class SessionsManager: ObservableObject {
         
         do {
             let fetchedSessions = try context.fetch(fetchRequest)
-                    print("Fetched sessions count: \(fetchedSessions.count)")
             if let session = try context.fetch(fetchRequest).first {
                 
                 session.summary = newSummary
@@ -412,11 +380,9 @@ class SessionsManager: ObservableObject {
                 
                 if let book = session.book {
                     book.lastUpdated = Date()
-                    print("Updated lastUpdated for book: \(book.title ?? "Unknown Book")")
                 }
                 
                 try context.save()
-                print("Session \(sessionId) updated in CoreData with new summary.")
 
                 // Update sessionsManager.sessions to reflect the change in UI
                 if let index = self.sessions[bookTitle]?.firstIndex(where: { $0["id"] as? String == sessionId }) {
@@ -425,15 +391,12 @@ class SessionsManager: ObservableObject {
                         self.sessions[bookTitle]?[index]["lastUpdated"] = session.lastUpdated
                         self.sessions[bookTitle]?[index]["needsSync"] = true
                     }
-                    print("Updated session \(sessionId) in sessionsManager.sessions.")
                     return true
                 }
             } else {
-                print("Error: Session \(sessionId) not found in CoreData.")
                 return false
             }
         } catch {
-            print("Error updating session summary: \(error.localizedDescription)")
             return false
         }
         return false

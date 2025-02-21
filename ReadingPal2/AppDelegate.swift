@@ -18,7 +18,6 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         if #available(iOS 10.0, *) {
             UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) {
                 granted, error in
-                print("Permissions granted: \(granted)")
             }
             UNUserNotificationCenter.current().delegate = self
             Messaging.messaging().delegate = self
@@ -42,6 +41,5 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     }
     
     @objc func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
-        print("Firebase Token: \(String(describing: fcmToken))")
     }
 }
